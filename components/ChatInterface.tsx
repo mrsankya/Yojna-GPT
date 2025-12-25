@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -23,7 +22,14 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
     }
   ]);
   
-  // Re-run welcome message when language changes
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDictating, setIsDictating] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Speech Recognition Setup
+  const recognitionRef = useRef<any>(null);
+
   useEffect(() => {
     if (messages.length === 1) {
        setMessages([{
@@ -35,13 +41,62 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
     }
   }, [language]);
 
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, isLoading]);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      
+      // Set language based on app selection
+      const langMap: Record<string, string> = {
+        'English': 'en-IN',
+        'Hindi': 'hi-IN',
+        'Marathi': 'mr-IN',
+        'Tamil': 'ta-IN',
+        'Bengali': 'bn-IN',
+        'Telugu': 'te-IN',
+        'Kannada': 'kn-IN',
+        'Gujarati': 'gu-IN',
+        'Malayalam': 'ml-IN',
+        'Punjabi': 'pa-IN',
+        'Urdu': 'ur-IN'
+      };
+      recognitionRef.current.lang = langMap[language] || 'en-IN';
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(prev => (prev ? `${prev} ${transcript}` : transcript));
+        setIsDictating(false);
+      };
+
+      recognitionRef.current.onerror = () => {
+        setIsDictating(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsDictating(false);
+      };
+    }
+  }, [language]);
+
+  const toggleDictation = () => {
+    if (!recognitionRef.current) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+    if (isDictating) {
+      recognitionRef.current.stop();
+    } else {
+      setIsDictating(true);
+      recognitionRef.current.start();
+    }
+  };
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -145,18 +200,36 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
                 ? 'bg-red-500 text-white animate-pulse' 
                 : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
             }`}
-            title="Talk to Buddy"
+            title="Live Audio Assistant"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
             </svg>
           </button>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={t('chat_placeholder', language)}
-            className="flex-1 p-3 rounded-xl border bg-white text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all shadow-inner"
-          />
+          
+          <div className="flex-1 relative flex items-center">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={t('chat_placeholder', language)}
+              className="w-full p-3 pr-12 rounded-xl border bg-white text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all shadow-inner"
+            />
+            <button
+              type="button"
+              onClick={toggleDictation}
+              className={`absolute right-3 p-1.5 rounded-lg transition-colors ${
+                isDictating 
+                  ? 'text-red-500 animate-pulse' 
+                  : 'text-slate-400 hover:text-orange-500'
+              }`}
+              title="Dictate message"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/>
+              </svg>
+            </button>
+          </div>
+
           <button
             type="submit"
             disabled={!input.trim() || isLoading}

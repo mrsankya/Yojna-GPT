@@ -1,0 +1,8 @@
+{
+  "name": "YojnaGPT",
+  "description": "A multilingual AI assistant designed to help Indian citizens discover and apply for government schemes using voice and text.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}

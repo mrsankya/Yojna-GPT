@@ -1,0 +1,101 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YojnaGPT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); }
+        .dark .glass { background: rgba(0, 0, 0, 0.3); }
+        
+        /* Custom Auth Panel Styles from User */
+        .auth-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            height: 550px;
+            border: 2px solid #ea580c; /* Saffron/Orange Theme */
+            box-shadow: 0 0 25px rgba(234, 88, 12, 0.3);
+            overflow: hidden;
+            background: #fff;
+            border-radius: 24px;
+        }
+        .dark .auth-wrapper { background: #1e293b; border-color: #f97316; }
+
+        .auth-wrapper .credentials-panel {
+            position: absolute;
+            top: 0;
+            width: 50%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 10;
+            transition: 0.6s ease-in-out;
+        }
+
+        .credentials-panel.signin { left: 0; padding: 0 40px; }
+        .credentials-panel.signup { right: 0; padding: 0 40px; opacity: 0; pointer-events: none; }
+        
+        .auth-wrapper.toggled .credentials-panel.signin { transform: translateX(-100%); opacity: 0; pointer-events: none; }
+        .auth-wrapper.toggled .credentials-panel.signup { transform: translateX(0); opacity: 1; pointer-events: inherit; }
+
+        .field-wrapper { position: relative; width: 100%; height: 50px; margin-top: 25px; }
+        .field-wrapper input {
+            width: 100%; height: 100%; background: transparent; border: none; outline: none;
+            font-size: 16px; font-weight: 500; border-bottom: 2px solid #cbd5e1;
+            padding-right: 30px; transition: .5s; color: inherit;
+        }
+        .field-wrapper input:focus, .field-wrapper input:valid { border-bottom: 2px solid #ea580c; }
+        .field-wrapper label {
+            position: absolute; top: 50%; left: 0; transform: translateY(-50%);
+            font-size: 16px; color: #64748b; transition: .5s; pointer-events: none;
+        }
+        .field-wrapper input:focus~label, .field-wrapper input:valid~label { top: -5px; color: #ea580c; font-size: 12px; }
+        .field-wrapper i { position: absolute; top: 50%; right: 0; transform: translateY(-50%); color: #64748b; }
+
+        .welcome-section {
+            position: absolute; top: 0; height: 100%; width: 50%;
+            display: flex; justify-content: center; flex-direction: column;
+            background: linear-gradient(135deg, #ea580c, #f97316);
+            color: white; padding: 40px; transition: 0.6s ease-in-out;
+            z-index: 5;
+        }
+        .welcome-section.signin { right: 0; transform: translateX(0); border-radius: 100px 0 0 100px; }
+        .welcome-section.signup { left: 0; transform: translateX(-100%); border-radius: 0 100px 100px 0; }
+        
+        .auth-wrapper.toggled .welcome-section.signin { transform: translateX(100%); }
+        .auth-wrapper.toggled .welcome-section.signup { transform: translateX(0); }
+
+        /* Custom Markdown Styling */
+        .prose-custom { font-size: 0.95rem; line-height: 1.6; }
+        .prose-custom p { margin-bottom: 0.75rem; }
+        .prose-custom ul { list-style-type: disc; padding-left: 1.25rem; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react-markdown": "https://esm.sh/react-markdown@^9.0.1",
+    "remark-gfm": "https://esm.sh/remark-gfm@^4.0.0"
+  }
+}
+</script>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200">
+    <div id="root"></div>
+</body>
+</html>

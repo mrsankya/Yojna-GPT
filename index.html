@@ -14,17 +14,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); }
         .dark .glass { background: rgba(0, 0, 0, 0.3); }
         
-        /* Custom Auth Panel Styles from User */
         .auth-wrapper {
             position: relative;
             width: 100%;
             max-width: 800px;
             height: 550px;
-            border: 2px solid #ea580c; /* Saffron/Orange Theme */
+            border: 2px solid #ea580c;
             box-shadow: 0 0 25px rgba(234, 88, 12, 0.3);
             overflow: hidden;
             background: #fff;
@@ -77,7 +76,6 @@
         .auth-wrapper.toggled .welcome-section.signin { transform: translateX(100%); }
         .auth-wrapper.toggled .welcome-section.signup { transform: translateX(0); }
 
-        /* Custom Markdown Styling */
         .prose-custom { font-size: 0.95rem; line-height: 1.6; }
         .prose-custom p { margin-bottom: 0.75rem; }
         .prose-custom ul { list-style-type: disc; padding-left: 1.25rem; }
@@ -90,12 +88,25 @@
     "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react-markdown": "https://esm.sh/react-markdown@^9.0.1",
-    "remark-gfm": "https://esm.sh/remark-gfm@^4.0.0"
+    "remark-gfm": "https://esm.sh/remark-gfm@^4.0.0",
+    "./App": "./App.tsx",
+    "./types": "./types.ts",
+    "./constants": "./constants.tsx",
+    "./services/geminiService": "./services/geminiService.ts",
+    "./components/ProfileSidebar": "./components/ProfileSidebar.tsx",
+    "./components/ChatInterface": "./components/ChatInterface.tsx",
+    "./components/VoiceOverlay": "./components/VoiceOverlay.tsx",
+    "./components/SchemeComparator": "./components/SchemeComparator.tsx",
+    "./components/ProfilePage": "./components/ProfilePage.tsx",
+    "./components/AdminPanel": "./components/AdminPanel.tsx",
+    "./components/NewSchemesPage": "./components/NewSchemesPage.tsx",
+    "./components/AuthPage": "./components/AuthPage.tsx"
   }
 }
 </script>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200">
     <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>

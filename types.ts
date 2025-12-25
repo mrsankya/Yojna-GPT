@@ -1,4 +1,14 @@
 
+export interface FamilyMember {
+  id: string;
+  name: string;
+  relation: string;
+  age: number;
+  income: string;
+  occupation: string;
+  disability: boolean;
+}
+
 export interface UserProfile {
   age?: number;
   gender?: 'Male' | 'Female' | 'Other';
@@ -15,6 +25,8 @@ export interface UserProfile {
   phoneNumber?: string;
   email?: string;
   profileCompletion?: number;
+  familyMembers?: FamilyMember[];
+  citizenPoints?: number;
 }
 
 export interface Scheme {

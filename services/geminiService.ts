@@ -3,15 +3,14 @@ import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { SYSTEM_PROMPT } from "../constants";
 import { UserProfile, ComparisonData, Scheme } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export async function getSchemeResponse(
   message: string, 
   history: { role: 'user' | 'assistant', content: string }[],
   profile: UserProfile,
-  language: string, // Added language parameter to enforce selected language
+  language: string,
   userLocation?: { lat: number, lng: number }
 ) {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const profileContext = `User Profile Context: ${JSON.stringify(profile)}`;
   const locationContext = userLocation ? `User Lat/Lng: ${userLocation.lat}, ${userLocation.lng}` : '';
   const languageInstruction = `CRITICAL: You MUST respond ONLY in ${language}. Ignore input language detection if it differs from ${language}. Even if the user uses a different language, translate your understanding and reply ONLY in ${language}.`;
@@ -40,13 +39,18 @@ export async function getSchemeResponse(
     })).filter((u: any) => u.uri !== '#');
 
     return { text, urls };
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message?.includes("Requested entity was not found")) {
+      // This often triggers if a key is invalid or from a non-paid project
+      console.error("API Key error. User might need to re-select a paid key.");
+    }
     console.error("Gemini Error:", error);
     throw error;
   }
 }
 
 export async function compareSchemes(schemeNames: string[], language: string): Promise<ComparisonData> {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const prompt = `Compare the following two Indian government schemes in detail: ${schemeNames.join(' and ')}. 
   Return the response STRICTLY in ${language}. Ensure the links are accurate and current using Google Search.`;
 
@@ -104,6 +108,7 @@ export async function compareSchemes(schemeNames: string[], language: string): P
 }
 
 export async function getLatestSchemes(language: string): Promise<Partial<Scheme>[]> {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const prompt = `List 5 NEWLY introduced Indian government schemes (Central or State) from late 2024 or 2025. 
   For each scheme, provide its name, a short description, key benefits, and SPECIFIC REQUIRED DOCUMENTS. 
   Translate all content STRICTLY to ${language}. Use Google Search grounding for latest data.`;

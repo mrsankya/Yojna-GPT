@@ -65,7 +65,6 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
     const startSession = async () => {
       try {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Always use process.env.API_KEY directly
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         
         const sessionPromise = ai.live.connect({
@@ -86,7 +85,6 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
                   data: encode(new Uint8Array(int16.buffer)),
                   mimeType: 'audio/pcm;rate=16000',
                 };
-                // CRITICAL: Solely rely on sessionPromise resolves and then call `session.sendRealtimeInput`
                 sessionPromise.then((session) => {
                   session.sendRealtimeInput({ media: pcmBlob });
                 });
@@ -113,7 +111,7 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
               }
               if (message.serverContent?.interrupted) {
                 for (const source of sources.values()) {
-                  source.stop();
+                  try { source.stop(); } catch(e) {}
                   sources.delete(source);
                 }
                 nextStartTime = 0;
@@ -121,17 +119,18 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
               }
             },
             onerror: () => setStatus('Error'),
-            onclose: () => {
-              // Only trigger close if we're not just switching language
-              // The useEffect cleanup will handle the disconnect
-            },
+            onclose: () => {},
           },
           config: {
             responseModalities: [Modality.AUDIO],
             speechConfig: {
               voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
             },
-            systemInstruction: `${systemInstruction}. Please reply in ${language} using a warm, elder-sibling-like tone. Keep answers concise for voice.`,
+            systemInstruction: `${systemInstruction}. 
+            CRITICAL INSTRUCTION: You MUST speak EXCLUSIVELY in ${language}. 
+            Even if the user speaks to you in a different language, you MUST respond in ${language}. 
+            Do not use any other language or dialect except for ${language}. 
+            Use a warm, elder-sibling-like tone. Keep answers concise for voice.`,
           },
         });
         aiSession = await sessionPromise;
@@ -145,11 +144,11 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
 
     return () => {
       micStream?.getTracks().forEach(t => t.stop());
-      inputAudioContext.close();
-      outputAudioContext.close();
+      inputAudioContext.close().catch(() => {});
+      outputAudioContext.close().catch(() => {});
       aiSession?.close();
     };
-  }, [language, systemInstruction]); // Dependencies include language so it restarts on change
+  }, [language, systemInstruction]);
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center text-white p-6">
@@ -177,7 +176,6 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
       </div>
 
       <div className="relative">
-        {/* Pulsing rings */}
         <div className={`absolute inset-0 rounded-full bg-orange-500 opacity-20 animate-ping duration-1000 ${status === 'Listening...' ? 'block' : 'hidden'}`}></div>
         <div className={`absolute inset-0 rounded-full bg-orange-500 opacity-10 animate-pulse delay-75 ${status === 'Listening...' ? 'block' : 'hidden'}`}></div>
         

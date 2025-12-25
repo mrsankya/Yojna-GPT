@@ -19,54 +19,39 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
       id: '1',
       role: 'assistant',
       content: t('chat_intro', language),
-      timestamp: Date.now(),
-      sentiment: 'positive'
+      timestamp: Date.now()
     }
   ]);
   
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentSentiment, setCurrentSentiment] = useState<'positive' | 'neutral' | 'frustrated'>('neutral');
-  const scrollRef = useRef<HTMLDivElement>(null);
-
+  // Re-run welcome message when language changes
   useEffect(() => {
     if (messages.length === 1) {
        setMessages([{
          id: '1',
          role: 'assistant',
          content: t('chat_intro', language),
-         timestamp: Date.now(),
-         sentiment: 'positive'
+         timestamp: Date.now()
        }]);
     }
   }, [language]);
+
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, isLoading]);
 
-  const detectSentiment = (text: string): 'positive' | 'neutral' | 'frustrated' => {
-    const frustrationWords = ['not working', 'fail', 'waste', 'useless', 'bad', 'angry', 'error', 'wrong'];
-    const lowerText = text.toLowerCase();
-    if (frustrationWords.some(word => lowerText.includes(word))) return 'frustrated';
-    const positiveWords = ['thank', 'good', 'great', 'wow', 'happy', 'yes'];
-    if (positiveWords.some(word => lowerText.includes(word))) return 'positive';
-    return 'neutral';
-  };
-
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim() || isLoading) return;
-
-    const sentiment = detectSentiment(input);
-    setCurrentSentiment(sentiment);
 
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
       content: input,
-      timestamp: Date.now(),
-      sentiment
+      timestamp: Date.now()
     };
 
     setMessages(prev => [...prev, userMsg]);
@@ -75,15 +60,14 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
 
     try {
       const history = messages.slice(-6).map(m => ({ role: m.role, content: m.content }));
-      const response = await getSchemeResponse(input, history, profile);
+      const response = await getSchemeResponse(input, history, profile, language);
       
       const assistantMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: response.text,
         timestamp: Date.now(),
-        groundingUrls: response.urls,
-        sentiment: sentiment === 'frustrated' ? 'positive' : 'neutral' // Buddy tries to be extra helpful if user is frustrated
+        groundingUrls: response.urls
       };
       setMessages(prev => [...prev, assistantMsg]);
     } catch (err) {
@@ -91,8 +75,7 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: "I apologize, but I encountered a network error. Please try again in a moment.",
-        timestamp: Date.now(),
-        sentiment: 'neutral'
+        timestamp: Date.now()
       }]);
     } finally {
       setIsLoading(false);
@@ -101,21 +84,14 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-900 h-full">
-      {/* Sentiment Indicator */}
-      {currentSentiment === 'frustrated' && (
-        <div className="bg-orange-100 dark:bg-orange-950/50 text-orange-800 dark:text-orange-400 p-2 text-center text-xs font-bold animate-pulse">
-          ⚠️ I notice you're having trouble. I'm here to simplify things for you!
-        </div>
-      )}
-
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6">
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] lg:max-w-[70%] rounded-2xl p-4 shadow-sm transition-all duration-300 ${
+            <div className={`max-w-[85%] lg:max-w-[70%] rounded-2xl p-4 shadow-sm ${
               m.role === 'user' 
                 ? 'bg-orange-600 text-white rounded-tr-none' 
                 : 'bg-white dark:bg-slate-800 dark:text-slate-100 rounded-tl-none border dark:border-slate-700'
-            } ${m.sentiment === 'frustrated' && m.role === 'user' ? 'ring-2 ring-red-400' : ''}`}>
+            }`}>
               <div className="prose-custom text-inherit dark:prose-invert">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {m.content}

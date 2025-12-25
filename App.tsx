@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import ProfileSidebar from './components/ProfileSidebar';
 import ChatInterface from './components/ChatInterface';
@@ -23,9 +24,7 @@ const App: React.FC = () => {
     state: 'Uttar Pradesh',
     age: 28,
     income: '1-3 Lakhs',
-    occupation: 'Farmer',
-    familyMembers: [],
-    citizenPoints: 1250
+    occupation: 'Farmer'
   });
   const [language, setLanguage] = useState<string>(AppLanguage.ENGLISH);
   const [isDark, setIsDark] = useState(false);
@@ -71,6 +70,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col lg:flex-row h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+      {/* Sidebar with Drawer functionality on mobile */}
       <ProfileSidebar 
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -84,11 +84,12 @@ const App: React.FC = () => {
         currentView={currentView}
         onViewChange={(view) => {
           setCurrentView(view);
-          setIsSidebarOpen(false);
+          setIsSidebarOpen(false); // Close on mobile navigation
         }}
         onLogout={() => setIsAuthenticated(false)}
       />
       
+      {/* Overlay for mobile drawer */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-30 lg:hidden"
@@ -145,6 +146,7 @@ const App: React.FC = () => {
         )}
       </main>
 
+      {/* Floating Gamification - Only show on chat */}
       {currentView === 'chat' && (
         <div className="hidden xl:flex fixed bottom-24 right-8 bg-white dark:bg-slate-800 border dark:border-slate-700 p-4 rounded-2xl shadow-xl flex-col items-center gap-2 animate-bounce">
           <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-xl shadow-inner">🏆</div>

@@ -1,14 +1,4 @@
 
-export interface FamilyMember {
-  id: string;
-  name: string;
-  relation: string;
-  age: number;
-  income: string;
-  occupation: string;
-  disability: boolean;
-}
-
 export interface UserProfile {
   age?: number;
   gender?: 'Male' | 'Female' | 'Other';
@@ -25,8 +15,6 @@ export interface UserProfile {
   phoneNumber?: string;
   email?: string;
   profileCompletion?: number;
-  familyMembers?: FamilyMember[];
-  citizenPoints?: number;
 }
 
 export interface Scheme {
@@ -54,7 +42,6 @@ export interface Message {
   timestamp: number;
   isVoice?: boolean;
   groundingUrls?: { title: string; uri: string }[];
-  sentiment?: 'positive' | 'neutral' | 'frustrated';
 }
 
 export enum AppLanguage {
@@ -71,4 +58,4 @@ export enum AppLanguage {
   ENGLISH = 'English'
 }
 
-export type AppView = 'chat' | 'profile' | 'admin' | 'discovery' | 'wizard';
+export type AppView = 'chat' | 'profile' | 'admin' | 'discovery';

@@ -9,10 +9,12 @@ export async function getSchemeResponse(
   message: string, 
   history: { role: 'user' | 'assistant', content: string }[],
   profile: UserProfile,
+  language: string, // Added language parameter to enforce selected language
   userLocation?: { lat: number, lng: number }
 ) {
   const profileContext = `User Profile Context: ${JSON.stringify(profile)}`;
   const locationContext = userLocation ? `User Lat/Lng: ${userLocation.lat}, ${userLocation.lng}` : '';
+  const languageInstruction = `CRITICAL: You MUST respond ONLY in ${language}. Ignore input language detection if it differs from ${language}. Even if the user uses a different language, translate your understanding and reply ONLY in ${language}.`;
 
   const contents = [
     ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'model', parts: [{ text: h.content }] })),
@@ -24,7 +26,7 @@ export async function getSchemeResponse(
       model: 'gemini-3-flash-preview',
       contents: contents as any,
       config: {
-        systemInstruction: `${SYSTEM_PROMPT}\n\n${profileContext}\n${locationContext}`,
+        systemInstruction: `${SYSTEM_PROMPT}\n\n${profileContext}\n${locationContext}\n${languageInstruction}`,
         tools: [{ googleSearch: {} }],
       },
     });
@@ -46,7 +48,7 @@ export async function getSchemeResponse(
 
 export async function compareSchemes(schemeNames: string[], language: string): Promise<ComparisonData> {
   const prompt = `Compare the following two Indian government schemes in detail: ${schemeNames.join(' and ')}. 
-  Return the response in ${language}. Ensure the links are accurate and current using Google Search.`;
+  Return the response STRICTLY in ${language}. Ensure the links are accurate and current using Google Search.`;
 
   const responseSchema = {
     type: Type.OBJECT,
@@ -87,7 +89,7 @@ export async function compareSchemes(schemeNames: string[], language: string): P
       model: 'gemini-3-pro-preview',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
-        systemInstruction: "You are an expert in Indian government policies. Return structured JSON data for comparison. Use Google Search to verify latest data.",
+        systemInstruction: `You are an expert in Indian government policies. Return structured JSON data for comparison. YOU MUST TRANSLATE ALL CONTENT TO ${language}. Use Google Search to verify latest data.`,
         responseMimeType: "application/json",
         responseSchema: responseSchema as any,
         tools: [{ googleSearch: {} }]
@@ -104,7 +106,7 @@ export async function compareSchemes(schemeNames: string[], language: string): P
 export async function getLatestSchemes(language: string): Promise<Partial<Scheme>[]> {
   const prompt = `List 5 NEWLY introduced Indian government schemes (Central or State) from late 2024 or 2025. 
   For each scheme, provide its name, a short description, key benefits, and SPECIFIC REQUIRED DOCUMENTS. 
-  Translate all content to ${language}. Use Google Search grounding for latest data.`;
+  Translate all content STRICTLY to ${language}. Use Google Search grounding for latest data.`;
 
   const responseSchema = {
     type: Type.ARRAY,
@@ -128,7 +130,7 @@ export async function getLatestSchemes(language: string): Promise<Partial<Scheme
       model: 'gemini-3-pro-preview',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
-        systemInstruction: "You are a policy analyst tracking new Indian government initiatives. Use Google Search grounding to ensure real-time accuracy.",
+        systemInstruction: `You are a policy analyst tracking new Indian government initiatives. USE GOOGLE SEARCH. ALL OUTPUT CONTENT MUST BE IN ${language}.`,
         responseMimeType: "application/json",
         responseSchema: responseSchema as any,
         tools: [{ googleSearch: {} }]

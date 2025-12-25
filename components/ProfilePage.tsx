@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { UserProfile, FamilyMember } from '../types';
+import React from 'react';
+import { UserProfile } from '../types';
 import { t } from '../constants';
 
 interface Props {
@@ -10,46 +10,16 @@ interface Props {
 }
 
 const ProfilePage: React.FC<Props> = ({ profile, setProfile, language }) => {
-  const [showAddFamily, setShowAddFamily] = useState(false);
-  const completion = profile.profileCompletion || 75;
+  const completion = 75; // Simulated completion percentage
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setProfile({ ...profile, [name]: value });
   };
 
-  const addFamilyMember = (e: React.FormEvent) => {
-    e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
-    
-    const newMember: FamilyMember = {
-      id: Date.now().toString(),
-      name: formData.get('name') as string,
-      relation: formData.get('relation') as string,
-      age: parseInt(formData.get('age') as string),
-      income: formData.get('income') as string,
-      occupation: formData.get('occupation') as string,
-      disability: formData.get('disability') === 'on'
-    };
-
-    setProfile({
-      ...profile,
-      familyMembers: [...(profile.familyMembers || []), newMember]
-    });
-    setShowAddFamily(false);
-  };
-
-  const removeFamilyMember = (id: string) => {
-    setProfile({
-      ...profile,
-      familyMembers: (profile.familyMembers || []).filter(m => m.id !== id)
-    });
-  };
-
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900 p-4 lg:p-8 animate-in fade-in slide-in-from-right-4 duration-500">
-      <div className="max-w-5xl mx-auto space-y-8 pb-20">
+      <div className="max-w-5xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border dark:border-slate-700">
           <div className="flex items-center gap-6">
@@ -123,59 +93,6 @@ const ProfilePage: React.FC<Props> = ({ profile, setProfile, language }) => {
               </div>
             </section>
 
-            {/* Family Members Section */}
-            <section className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border dark:border-slate-700">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white">
-                  👨‍👩‍👧‍👦 Family Members
-                </h3>
-                <button 
-                  onClick={() => setShowAddFamily(true)}
-                  className="px-4 py-2 bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 rounded-xl text-xs font-bold hover:bg-orange-200 transition-colors"
-                >
-                  + Add Member
-                </button>
-              </div>
-
-              {showAddFamily && (
-                <form onSubmit={addFamilyMember} className="mb-6 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-orange-200 dark:border-orange-900/30 animate-in slide-in-from-top-4 duration-300">
-                  <div className="grid grid-cols-2 gap-4">
-                    <input name="name" placeholder="Name" required className="p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-700 text-sm outline-none" />
-                    <input name="relation" placeholder="Relation (e.g. Mother)" required className="p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-700 text-sm outline-none" />
-                    <input name="age" type="number" placeholder="Age" required className="p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-700 text-sm outline-none" />
-                    <select name="income" required className="p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-700 text-sm outline-none">
-                      <option value="No Income">No Income</option>
-                      <option value="Below 1 Lakh">Below 1 Lakh</option>
-                      <option value="1-3 Lakhs">1-3 Lakhs</option>
-                      <option value="Above 3 Lakhs">Above 3 Lakhs</option>
-                    </select>
-                  </div>
-                  <div className="mt-4 flex gap-2">
-                    <button type="submit" className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Save</button>
-                    <button type="button" onClick={() => setShowAddFamily(false)} className="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold">Cancel</button>
-                  </div>
-                </form>
-              )}
-
-              <div className="space-y-4">
-                {(profile.familyMembers || []).length === 0 ? (
-                  <p className="text-center py-8 text-slate-400 text-sm italic">No family members added yet. Add them to check their eligibility for schemes like Widow Pension or Old Age Support.</p>
-                ) : (
-                  profile.familyMembers!.map(member => (
-                    <div key={member.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border dark:border-slate-700">
-                      <div>
-                        <p className="font-bold text-slate-900 dark:text-slate-100">{member.name} <span className="text-xs font-normal text-slate-500">({member.relation})</span></p>
-                        <p className="text-xs text-slate-500">Age: {member.age} • Income: {member.income}</p>
-                      </div>
-                      <button onClick={() => removeFamilyMember(member.id)} className="text-red-500 hover:text-red-600 p-2">
-                        🗑️
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
-
             <section className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border dark:border-slate-700">
               <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
                 {t('profile_docs', language)}
@@ -200,7 +117,7 @@ const ProfilePage: React.FC<Props> = ({ profile, setProfile, language }) => {
             <section className="bg-orange-600 text-white p-6 rounded-3xl shadow-lg">
               <h3 className="text-lg font-bold mb-4">{t('profile_points', language)}</h3>
               <div className="text-center py-4">
-                <span className="text-5xl font-black">{profile.citizenPoints || 1450}</span>
+                <span className="text-5xl font-black">1,450</span>
                 <p className="text-orange-200 text-sm mt-2">Level 3: Active Citizen</p>
               </div>
             </section>

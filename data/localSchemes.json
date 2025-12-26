@@ -1,0 +1,181 @@
+
+{
+  "schemes": [
+    {
+      "id": "pm-kisan",
+      "category": "Agriculture",
+      "provider": "Central Government",
+      "names": { "English": "PM-Kisan Samman Nidhi", "Hindi": "पीएम-किसान सम्मान निधि", "Marathi": "पीएम-किसान सन्मान निधी" },
+      "descriptions": { "English": "Income support of ₹6000/year to all landholding farmers' families.", "Hindi": "सभी भूमिधारक किसान परिवारों को ₹6000/वर्ष की आय सहायता।", "Marathi": "सर्व जमीनधारक शेतकरी कुटुंबांना ₹६०००/वर्ष उत्पन्न समर्थन." },
+      "benefits": ["₹6000 per year in 3 installments", "Direct bank transfer"],
+      "eligibility": ["Small and marginal farmers", "Indian citizenship", "Land ownership records"],
+      "documents": ["Aadhaar Card", "Land papers", "Bank Account"],
+      "applyLink": "https://pmkisan.gov.in/"
+    },
+    {
+      "id": "pm-jay",
+      "category": "Healthcare",
+      "provider": "Central Government",
+      "names": { "English": "Ayushman Bharat (PM-JAY)", "Hindi": "आयुष्मान भारत (पीएम-जय)", "Marathi": "आयुष्मान भारत (पीएम-जय)" },
+      "descriptions": { "English": "Health cover of ₹5 lakhs per family per year for secondary and tertiary care.", "Hindi": "माध्यमिक और तृतीयक देखभाल के लिए प्रति परिवार प्रति वर्ष ₹5 लाख का स्वास्थ्य कवर।", "Marathi": "दुय्यम आणि तृतीयक काळजीसाठी प्रति कुटुंब प्रति वर्ष ₹५ लाख आरोग्य विमा." },
+      "benefits": ["Cashless hospitalization", "₹5 Lakh annual coverage"],
+      "eligibility": ["SECC 2011 listed families", "Low income groups"],
+      "documents": ["Aadhaar Card", "Ration Card"],
+      "applyLink": "https://pmjay.gov.in/"
+    },
+    {
+      "id": "pmay-u",
+      "category": "Housing",
+      "provider": "Central Government",
+      "names": { "English": "PMAY-Urban", "Hindi": "पीएम आवास योजना (शहरी)", "Marathi": "पीएम आवास योजना (शहरी)" },
+      "descriptions": { "English": "Affordable housing for urban poor with interest subsidies.", "Hindi": "ब्याज सब्सिडी के साथ शहरी गरीबों के लिए किफायती आवास।", "Marathi": "व्याज सवलतीसह शहरी गरिबांसाठी परवडणारी घरे." },
+      "benefits": ["Subsidy up to ₹2.67 Lakh", "Interest subvention on home loans"],
+      "eligibility": ["EWS/LIG categories", "No pucca house anywhere in India"],
+      "documents": ["Identity Proof", "Address Proof", "Income Certificate"],
+      "applyLink": "https://pmaymis.gov.in/"
+    },
+    {
+      "id": "ssy",
+      "category": "Women & Child",
+      "provider": "Central Government",
+      "names": { "English": "Sukanya Samriddhi Yojana", "Hindi": "सुकन्या समृद्धि योजना", "Marathi": "सुकन्या समृद्धी योजना" },
+      "descriptions": { "English": "Savings scheme for the girl child with high interest rates.", "Hindi": "बालिकाओं के लिए उच्च ब्याज दरों वाली बचत योजना।", "Marathi": "मुलींसाठी उच्च व्याजदराची बचत योजना." },
+      "benefits": ["Tax benefits under 80C", "High interest rate (8.2%+)", "Maturity after 21 years"],
+      "eligibility": ["Girl child below 10 years", "Max 2 girls per family"],
+      "documents": ["Birth Certificate", "Guardian ID"],
+      "applyLink": "https://www.indiapost.gov.in/"
+    },
+    {
+      "id": "pm-mudra",
+      "category": "Business",
+      "provider": "Central Government",
+      "names": { "English": "PMMY (Mudra Loan)", "Hindi": "पीएम मुद्रा योजना", "Marathi": "पीएम मुद्रा योजना" },
+      "descriptions": { "English": "Loans up to ₹10 Lakh for small business units.", "Hindi": "छोटी व्यावसायिक इकाइयों के लिए ₹10 लाख तक का ऋण।", "Marathi": "लघु व्यवसाय घटकांसाठी ₹१० लाखांपर्यंतचे कर्ज." },
+      "benefits": ["Shishu (up to 50k)", "Kishore (50k-5L)", "Tarun (5L-10L)"],
+      "eligibility": ["Small business owners", "Entrepreneurs"],
+      "documents": ["ID Proof", "Business Plan", "Address Proof"],
+      "applyLink": "https://www.mudra.org.in/"
+    },
+    {
+      "id": "apy",
+      "category": "Social Security",
+      "provider": "Central Government",
+      "names": { "English": "Atal Pension Yojana", "Hindi": "अटल पेंशन योजना", "Marathi": "अटल पेन्शन योजना" },
+      "descriptions": { "English": "Pension scheme for unorganized sector workers.", "Hindi": "असंगठित क्षेत्र के श्रमिकों के लिए पेंशन योजना।", "Marathi": "असंघटित क्षेत्रातील कामगारांसाठी पेन्शन योजना." },
+      "benefits": ["Fixed pension ₹1000-₹5000", "Spouse benefits"],
+      "eligibility": ["Age 18-40 years", "Savings bank account holder"],
+      "documents": ["Aadhaar Card", "Mobile Number"],
+      "applyLink": "https://www.npscra.nsdl.co.in/"
+    },
+    {
+      "id": "pm-svanidhi",
+      "category": "Business",
+      "provider": "Central Government",
+      "names": { "English": "PM SVANidhi", "Hindi": "पीएम स्वनिधि", "Marathi": "पीएम स्वनिधी" },
+      "descriptions": { "English": "Micro-credit for street vendors to restart businesses.", "Hindi": "रेहड़ी-पटरी वालों के लिए व्यवसाय शुरू करने हेतु सूक्ष्म ऋण।", "Marathi": "फेरीवाल्यांसाठी व्यवसाय पुन्हा सुरू करण्यासाठी सूक्ष्म कर्ज." },
+      "benefits": ["₹10,000 first loan", "Interest subsidy", "Digital transaction cashback"],
+      "eligibility": ["Street vendors in urban areas"],
+      "documents": ["Vending Certificate", "Aadhaar Card"],
+      "applyLink": "https://pmsvanidhi.mohua.gov.in/"
+    },
+    {
+      "id": "jjby",
+      "category": "Social Security",
+      "provider": "Central Government",
+      "names": { "English": "PM Jeevan Jyoti Bima Yojana", "Hindi": "पीएम जीवन ज्योति बीमा योजना", "Marathi": "पीएम जीवन ज्योती विमा योजना" },
+      "descriptions": { "English": "Life insurance cover of ₹2 Lakh at low premium.", "Hindi": "कम प्रीमियम पर ₹2 लाख का जीवन बीमा कवर।", "Marathi": "कमी प्रीमियममध्ये ₹२ लाखांचे जीवन विमा संरक्षण." },
+      "benefits": ["₹2 Lakh death cover", "Low annual premium ₹436"],
+      "eligibility": ["Age 18-50 years", "Bank account"],
+      "documents": ["Aadhaar", "Bank passbook"],
+      "applyLink": "https://jansuraksha.gov.in/"
+    },
+    {
+      "id": "pmsby",
+      "category": "Social Security",
+      "provider": "Central Government",
+      "names": { "English": "PM Suraksha Bima Yojana", "Hindi": "पीएम सुरक्षा बीमा योजना", "Marathi": "पीएम सुरक्षा विमा योजना" },
+      "descriptions": { "English": "Accident insurance cover of ₹2 Lakh at ₹20/year.", "Hindi": "₹20/वर्ष पर ₹2 लाख का दुर्घटना बीमा कवर।", "Marathi": "₹२०/वर्ष दराने ₹२ लाखांचे अपघाती विमा संरक्षण." },
+      "benefits": ["₹2 Lakh for accidental death/disability"],
+      "eligibility": ["Age 18-70 years", "Bank account"],
+      "documents": ["Aadhaar", "Bank passbook"],
+      "applyLink": "https://jansuraksha.gov.in/"
+    },
+    {
+      "id": "pmsym",
+      "category": "Social Security",
+      "provider": "Central Government",
+      "names": { "English": "PM Shram Yogi Maandhan", "Hindi": "पीएम श्रम योगी मानधन", "Marathi": "पीएम श्रम योगी मानधन" },
+      "descriptions": { "English": "Pension for unorganized workers like rickshaw pullers.", "Hindi": "रिक्शा चालकों जैसे असंगठित श्रमिकों के लिए पेंशन।", "Marathi": "रिक्षाचालकांसारख्या असंघटित कामगारांसाठी पेन्शन." },
+      "benefits": ["₹3000 monthly pension after 60"],
+      "eligibility": ["Income < ₹15,000 pm", "Age 18-40 years"],
+      "documents": ["Aadhaar", "Bank account"],
+      "applyLink": "https://maandhan.in/"
+    },
+    {
+      "id": "pm-vishwakarma",
+      "category": "Business",
+      "provider": "Central Government",
+      "names": { "English": "PM Vishwakarma", "Hindi": "पीएम विश्वकर्मा", "Marathi": "पीएम विश्वकर्मा" },
+      "descriptions": { "English": "Support for traditional artisans and craftspeople.", "Hindi": "पारंपरिक कारीगरों और शिल्पकारों के लिए सहायता।", "Marathi": "पारंपारिक कारागीर आणि शिल्पकारांसाठी समर्थन." },
+      "benefits": ["ID cards", "Skill upgrading", "Collateral-free credit"],
+      "eligibility": ["Traditional artisans", "Craftspeople"],
+      "documents": ["Aadhaar", "Proof of occupation"],
+      "applyLink": "https://pmvishwakarma.gov.in/"
+    },
+    {
+      "id": "lakhpati-didi",
+      "category": "Women & Child",
+      "provider": "Central Government",
+      "names": { "English": "Lakhpati Didi", "Hindi": "लखपति दीदी", "Marathi": "लखपती दीदी" },
+      "descriptions": { "English": "Empowering 3 crore women in SHGs to earn ₹1 Lakh/year.", "Hindi": "एसएचजी में 3 करोड़ महिलाओं को ₹1 लाख/वर्ष कमाने के लिए सशक्त बनाना।", "Marathi": "बचत गटातील ३ कोटी महिलांना वर्षाला ₹१ लाख कमवण्यासाठी सक्षम करणे." },
+      "benefits": ["Skill training", "Market linkage", "Micro-loans"],
+      "eligibility": ["Self Help Group members"],
+      "documents": ["SHG Membership record", "ID Proof"],
+      "applyLink": "https://nrlm.gov.in/"
+    },
+    {
+      "id": "pm-poshan",
+      "category": "Education",
+      "provider": "Central Government",
+      "names": { "English": "PM POSHAN (Mid Day Meal)", "Hindi": "पीएम पोषण (मिड डे मील)", "Marathi": "पीएम पोषण (माध्यान्ह आहार)" },
+      "descriptions": { "English": "Hot cooked meals for students in government schools.", "Hindi": "सरकारी स्कूलों में छात्रों के लिए पका हुआ भोजन।", "Marathi": "सरकारी शाळांमधील विद्यार्थ्यांसाठी शिजवलेले जेवण." },
+      "benefits": ["Nutrition support", "Better attendance"],
+      "eligibility": ["Class 1-8 students in govt schools"],
+      "documents": ["School Enrollment"],
+      "applyLink": "https://pmposhan.education.gov.in/"
+    },
+    {
+      "id": "pm-shri",
+      "category": "Education",
+      "provider": "Central Government",
+      "names": { "English": "PM SHRI Schools", "Hindi": "पीएम श्री स्कूल", "Marathi": "पीएम श्री शाळा" },
+      "descriptions": { "English": "Showcase schools for implementing NEP 2020.", "Hindi": "एनईपी 2020 लागू करने के लिए शोकेस स्कूल।", "Marathi": "NEP २०२० च्या अंमलबजावणीसाठी आदर्श शाळा." },
+      "benefits": ["Modern infrastructure", "Quality education", "ICT labs"],
+      "eligibility": ["Selected public schools"],
+      "documents": ["N/A"],
+      "applyLink": "https://pmshrischools.education.gov.in/"
+    },
+    {
+      "id": "standup-india",
+      "category": "Business",
+      "provider": "Central Government",
+      "names": { "English": "Standup India", "Hindi": "स्टैंडअप इंडिया", "Marathi": "स्टँडअप इंडिया" },
+      "descriptions": { "English": "Loans for SC/ST and women entrepreneurs for greenfield enterprises.", "Hindi": "एससी/एसटी और महिला उद्यमियों के लिए ग्रीनफील्ड उद्यमों के लिए ऋण।", "Marathi": "SC/ST आणि महिला उद्योजकांसाठी ग्रीनफील्ड उद्योगांसाठी कर्ज." },
+      "benefits": ["Loan ₹10L - ₹100L", "Refinance through SIDBI"],
+      "eligibility": ["SC/ST or Woman above 18 years"],
+      "documents": ["Identity", "Category Certificate", "Business Plan"],
+      "applyLink": "https://www.standupmitra.in/"
+    },
+    {
+      "id": "kanya-sumangala",
+      "category": "Women & Child",
+      "provider": "State Government (UP)",
+      "names": { "English": "Mukhya Mantri Kanya Sumangala", "Hindi": "मुख्यमंत्री कन्या सुमंगला योजना", "Marathi": "मुख्यमंत्री कन्या सुमंगला योजना" },
+      "descriptions": { "English": "Financial aid for girls at different stages of life from birth to education.", "Hindi": "जन्म से शिक्षा तक जीवन के विभिन्न चरणों में लड़कियों के लिए वित्तीय सहायता।", "Marathi": "मुलींच्या जन्मापासून शिक्षणापर्यंत विविध टप्प्यांवर आर्थिक मदत." },
+      "benefits": ["Total ₹15,000 - ₹25,000 in stages"],
+      "eligibility": ["UP residents", "Annual income < ₹3 Lakh"],
+      "documents": ["Birth Certificate", "Income Certificate", "Residence Proof"],
+      "applyLink": "https://mksy.up.gov.in/"
+    }
+  ]
+}

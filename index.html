@@ -18,12 +18,12 @@
         .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); }
         .dark .glass { background: rgba(0, 0, 0, 0.3); }
         
-        /* Custom Auth Panel Styles from User */
+        /* Custom Auth Panel Styles */
         .auth-wrapper {
             position: relative;
             width: 100%;
             max-width: 800px;
-            height: 550px;
+            height: 600px;
             border: 2px solid #ea580c; /* Saffron/Orange Theme */
             box-shadow: 0 0 25px rgba(234, 88, 12, 0.3);
             overflow: hidden;
@@ -50,7 +50,7 @@
         .auth-wrapper.toggled .credentials-panel.signin { transform: translateX(-100%); opacity: 0; pointer-events: none; }
         .auth-wrapper.toggled .credentials-panel.signup { transform: translateX(0); opacity: 1; pointer-events: inherit; }
 
-        .field-wrapper { position: relative; width: 100%; height: 50px; margin-top: 25px; }
+        .field-wrapper { position: relative; width: 100%; height: 50px; margin-top: 20px; }
         .field-wrapper input {
             width: 100%; height: 100%; background: transparent; border: none; outline: none;
             font-size: 16px; font-weight: 500; border-bottom: 2px solid #cbd5e1;
@@ -76,6 +76,50 @@
         
         .auth-wrapper.toggled .welcome-section.signin { transform: translateX(100%); }
         .auth-wrapper.toggled .welcome-section.signup { transform: translateX(0); }
+
+        /* Rocket "Pushing" Animation */
+        @keyframes rocket-launch-push {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0); }
+        }
+        
+        @keyframes fire-flicker {
+            0%, 100% { height: 25px; opacity: 0.7; filter: blur(3px); transform: translateX(-50%) rotate(45deg) scale(1); }
+            50% { height: 45px; opacity: 1; filter: blur(1.5px); transform: translateX(-50%) rotate(45deg) scale(1.3); }
+        }
+
+        .push-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: rocket-launch-push 2s ease-in-out infinite;
+        }
+
+        .rocket-pusher {
+            font-size: 4.5rem;
+            position: relative;
+            margin-top: 1rem;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));
+        }
+
+        .thruster-flame {
+            position: absolute;
+            bottom: 5px;
+            left: 25%;
+            transform-origin: top center;
+            width: 25px;
+            height: 40px;
+            background: linear-gradient(to bottom, #fbbf24, #f59e0b, #ef4444, transparent);
+            border-radius: 50%;
+            animation: fire-flicker 0.1s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        .welcome-content {
+            text-align: center;
+            margin-bottom: -1rem;
+        }
 
         /* Custom Markdown Styling */
         .prose-custom { font-size: 0.95rem; line-height: 1.6; }

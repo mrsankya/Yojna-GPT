@@ -24,7 +24,8 @@ const App: React.FC = () => {
     state: 'Uttar Pradesh',
     age: 28,
     income: '1-3 Lakhs',
-    occupation: 'Farmer'
+    occupation: 'Farmer',
+    citizenPoints: 1450
   });
   const [language, setLanguage] = useState<string>(AppLanguage.ENGLISH);
   const [isDark, setIsDark] = useState(false);
@@ -42,7 +43,12 @@ const App: React.FC = () => {
 
   if (!isAuthenticated) {
     return <AuthPage onLogin={(data) => {
-      setProfile(prev => ({ ...prev, ...data }));
+      const updatedProfile = { 
+        ...profile, 
+        ...data,
+        citizenPoints: data.isDemo ? 5000 : 1450 // Demo mode unlocks all achievements
+      };
+      setProfile(updatedProfile);
       setIsAuthenticated(true);
     }} />;
   }
@@ -68,9 +74,15 @@ const App: React.FC = () => {
     }
   };
 
+  const getTier = (points: number) => {
+    if (points >= 5000) return 'Gold Elite';
+    if (points >= 2500) return 'Gold Explorer';
+    if (points >= 1000) return 'Silver Citizen';
+    return 'Bronze Citizen';
+  };
+
   return (
     <div className="flex flex-col lg:flex-row h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-      {/* Sidebar with Drawer functionality on mobile */}
       <ProfileSidebar 
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -84,12 +96,11 @@ const App: React.FC = () => {
         currentView={currentView}
         onViewChange={(view) => {
           setCurrentView(view);
-          setIsSidebarOpen(false); // Close on mobile navigation
+          setIsSidebarOpen(false);
         }}
         onLogout={() => setIsAuthenticated(false)}
       />
       
-      {/* Overlay for mobile drawer */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-30 lg:hidden"
@@ -98,7 +109,6 @@ const App: React.FC = () => {
       )}
 
       <main className="flex-1 flex flex-col relative overflow-hidden h-full">
-        {/* Mobile Header */}
         <header className="lg:hidden bg-white dark:bg-slate-900 p-4 border-b dark:border-slate-800 flex items-center justify-between z-20">
           <div className="flex items-center gap-3">
             <button 
@@ -116,7 +126,7 @@ const App: React.FC = () => {
               onClick={() => setIsComparatorOpen(true)}
               className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full flex items-center justify-center"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+              <i className="fa-solid fa-code-compare text-xs"></i>
             </button>
             <button 
               onClick={() => setIsVoiceOverlayOpen(true)}
@@ -146,13 +156,12 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Floating Gamification - Only show on chat */}
       {currentView === 'chat' && (
         <div className="hidden xl:flex fixed bottom-24 right-8 bg-white dark:bg-slate-800 border dark:border-slate-700 p-4 rounded-2xl shadow-xl flex-col items-center gap-2 animate-bounce">
           <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-xl shadow-inner">🏆</div>
           <div className="text-center">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">GPT Level</p>
-            <p className="text-sm font-bold dark:text-white">Silver Explorer</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">GPT Status</p>
+            <p className="text-sm font-bold dark:text-white">{getTier(profile.citizenPoints || 0)}</p>
           </div>
         </div>
       )}

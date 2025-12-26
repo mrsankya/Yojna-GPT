@@ -30,6 +30,16 @@ const NewSchemesPage: React.FC<Props> = ({ language }) => {
     fetchSchemes();
   }, [language]);
 
+  const handleShare = (scheme: Partial<Scheme>) => {
+    const text = encodeURIComponent(
+      `Check out this Government Scheme: ${scheme.name}\n\n` +
+      `${scheme.description}\n\n` +
+      `Official Link: ${scheme.applyLink}\n\n` +
+      `Shared via SmartGov Buddy 🇮🇳`
+    );
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
   const renderSchemeCard = (scheme: Partial<Scheme>, isNew = false) => (
     <div key={scheme.name} className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border dark:border-slate-700 overflow-hidden flex flex-col hover:shadow-xl transition-all group relative">
       {isNew && (
@@ -42,6 +52,13 @@ const NewSchemesPage: React.FC<Props> = ({ language }) => {
           <span className="px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold rounded-full border border-green-200 dark:border-green-800 uppercase tracking-widest">
             {scheme.provider || 'Government of India'}
           </span>
+          <button 
+            onClick={() => handleShare(scheme)}
+            className="text-green-600 hover:text-green-700 transition-colors p-2 bg-green-50 dark:bg-green-900/20 rounded-full"
+            title="Share to WhatsApp"
+          >
+            <i className="fa-brands fa-whatsapp text-lg"></i>
+          </button>
         </div>
         
         <div>
@@ -124,7 +141,7 @@ const NewSchemesPage: React.FC<Props> = ({ language }) => {
           {loadingDynamic ? (
             <div className="bg-white dark:bg-slate-900 border dark:border-slate-800 p-12 rounded-3xl flex flex-col items-center justify-center space-y-4">
               <div className="w-10 h-10 border-4 border-orange-100 border-t-orange-600 rounded-full animate-spin"></div>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Buddy is scanning the latest Gazette notifications...</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">SmartGov Buddy is scanning the latest notifications...</p>
             </div>
           ) : error ? (
             <div className="p-8 text-center bg-orange-50 dark:bg-orange-950/20 rounded-3xl border border-orange-100 dark:border-orange-900/30">

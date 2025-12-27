@@ -27,13 +27,22 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
   const [isLoading, setIsLoading] = useState(false);
   const [isDictating, setIsDictating] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [hasApiError, setHasApiError] = useState(false);
+  const [dismissedInfo, setDismissedInfo] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Speech Recognition Setup
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    const handleStatusChange = () => setIsOnline(navigator.onLine);
+    const handleStatusChange = () => {
+      const online = navigator.onLine;
+      setIsOnline(online);
+      if (online) {
+        setHasApiError(false);
+        setDismissedInfo(false);
+      }
+    };
     window.addEventListener('online', handleStatusChange);
     window.addEventListener('offline', handleStatusChange);
     return () => {
@@ -112,6 +121,13 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
       const history = messages.slice(-6).map(m => ({ role: m.role, content: m.content }));
       const response = await getSchemeResponse(input, history, profile, language);
       
+      // Update the error state based on the 'isLimited' flag from the service
+      if (response.isLimited) {
+        setHasApiError(true);
+      } else {
+        setHasApiError(false);
+      }
+
       const assistantMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -121,10 +137,11 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
       };
       setMessages(prev => [...prev, assistantMsg]);
     } catch (err: any) {
+      setHasApiError(true);
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "I encountered an error. If you are offline, I am trying to use my local database, but something went wrong. Please check your connection.",
+        content: "issue with server you can ask me only yojna (schemes)",
         timestamp: Date.now()
       }]);
     } finally {
@@ -137,15 +154,28 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
+  // Only show the informational text if there is an actual issue
+  const isLimited = (!isOnline || hasApiError) && !dismissedInfo;
+
   return (
     <div className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-900 h-full relative">
-      {!isOnline && (
-        <div className="absolute top-0 left-0 right-0 z-10 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-[10px] font-bold py-1 px-4 text-center border-b border-yellow-200 dark:border-yellow-800 uppercase tracking-widest">
-          ⚠️ Offline Mode: Searching Local Database Only
+      {/* Informational Pill - only shown when offline or API error */}
+      {isLimited && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="bg-orange-600/90 backdrop-blur-md text-white text-[10px] md:text-xs font-bold py-2 px-4 rounded-full shadow-lg border border-orange-400 flex items-center gap-3 whitespace-nowrap">
+            <span className="flex h-2 w-2 rounded-full bg-orange-200 animate-pulse"></span>
+            issue with server you can ask me only yojna (schemes)
+            <button 
+              onClick={() => setDismissedInfo(true)} 
+              className="ml-1 p-1 hover:bg-white/20 rounded-full transition-colors"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
         </div>
       )}
       
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6 pt-10">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6 pt-16">
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] lg:max-w-[70%] rounded-2xl p-4 shadow-sm ${

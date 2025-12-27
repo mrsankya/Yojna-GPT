@@ -4,16 +4,6 @@ import { SYSTEM_PROMPT } from "../constants";
 import { UserProfile, ComparisonData, Scheme } from "../types";
 import { searchLocalSchemes, getLocalLatestSchemes } from "./localSearchService";
 
-const getApiKey = () => {
-  try {
-    const key = (typeof process !== 'undefined' && process.env && process.env.API_KEY) ? process.env.API_KEY : '';
-    if (key && key.length > 20) return key;
-    return '';
-  } catch (e) {
-    return '';
-  }
-};
-
 export async function getSchemeResponse(
   message: string, 
   history: { role: 'user' | 'assistant', content: string }[],
@@ -22,19 +12,18 @@ export async function getSchemeResponse(
   userLocation?: { lat: number, lng: number }
 ) {
   const isOffline = !navigator.onLine;
-  const apiKey = getApiKey();
 
-  if (isOffline || !apiKey) {
+  if (isOffline) {
     const localResult = searchLocalSchemes(message, language);
-    const modeHeader = isOffline ? "⚠️ **Offline Mode Active**" : "⚠️ **Limited Mode (API Key Missing)**";
     return { 
-      text: `${modeHeader}\n\n${localResult}`, 
-      urls: [] 
+      text: localResult, 
+      urls: [],
+      isLimited: true
     };
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     const profileContext = `User Profile Context: ${JSON.stringify(profile)}`;
     const locationContext = userLocation ? `User Lat/Lng: ${userLocation.lat}, ${userLocation.lng}` : '';
     
@@ -47,7 +36,7 @@ export async function getSchemeResponse(
       model: 'gemini-3-flash-preview',
       contents: contents as any,
       config: {
-        systemInstruction: `${SYSTEM_PROMPT}\n\n${profileContext}\n${locationContext}\nCRITICAL: Reply ONLY in ${language}.`,
+        systemInstruction: `${SYSTEM_PROMPT}\n\n${profileContext}\n${locationContext}\nCRITICAL: Reply ONLY in ${language}. You are a helpful AI bot. If the user says hi/hello/namaste, greet them warmly and ask how you can help with government schemes.`,
         tools: [{ googleSearch: {} }],
       },
     });
@@ -60,25 +49,26 @@ export async function getSchemeResponse(
       uri: chunk.web?.uri || '#'
     })).filter((u: any) => u.uri !== '#');
 
-    return { text, urls };
+    return { text, urls, isLimited: false };
   } catch (error) {
     console.error("Gemini Error:", error);
+    // Only return local search as a last resort if API fails
     const localResult = searchLocalSchemes(message, language);
     return { 
-      text: `📡 **AI Service Unavailable**\n*Using built-in local data to assist you...*\n\n${localResult}`, 
-      urls: [] 
+      text: localResult, 
+      urls: [],
+      isLimited: true 
     };
   }
 }
 
 export async function compareSchemes(schemeNames: string[], language: string): Promise<ComparisonData> {
-  const apiKey = getApiKey();
-  if (!apiKey || !navigator.onLine) {
+  if (!navigator.onLine) {
      throw new Error("Local comparison tool is coming soon. Please connect to the internet for AI-powered comparison.");
   }
   
   try {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: [{ role: 'user', parts: [{ text: `Compare: ${schemeNames.join(' and ')}. Output JSON in ${language}.` }] }],
@@ -102,13 +92,12 @@ export async function compareSchemes(schemeNames: string[], language: string): P
 }
 
 export async function getLatestSchemes(language: string): Promise<Partial<Scheme>[]> {
-  const apiKey = getApiKey();
-  if (!apiKey || !navigator.onLine) {
+  if (!navigator.onLine) {
      return getLocalLatestSchemes(language);
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: [{ role: 'user', parts: [{ text: `List 5 latest Indian gov schemes in ${language}.` }] }],

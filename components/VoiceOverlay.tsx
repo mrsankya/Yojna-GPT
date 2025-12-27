@@ -48,7 +48,7 @@ async function decodeAudioData(
 }
 
 const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemInstruction }) => {
-  const [status, setStatus] = useState<'Connecting...' | 'Listening...' | 'Speaking...' | 'Error' | 'Limited'>('Connecting...');
+  const [status, setStatus] = useState<'Connecting...' | 'Listening...' | 'Speaking...' | 'Error'>('Connecting...');
   
   useEffect(() => {
     let nextStartTime = 0;
@@ -62,20 +62,16 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
     let aiSession: any = null;
 
     const startSession = async () => {
-      if (!navigator.onLine) {
-        setStatus('Limited');
-        return;
-      }
-
       try {
-        const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY) ? process.env.API_KEY : '';
-        if (!apiKey || apiKey.length < 20) {
-          setStatus('Limited');
-          return;
-        }
+        // Ensure audio contexts are resumed after user interaction
+        if (inputAudioContext.state === 'suspended') await inputAudioContext.resume();
+        if (outputAudioContext.state === 'suspended') await outputAudioContext.resume();
 
+        // Request microphone access
         micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const ai = new GoogleGenAI({ apiKey });
+        
+        // Initialize Gemini API with the environment key
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
         
         const sessionPromise = ai.live.connect({
           model: 'gemini-2.5-flash-native-audio-preview-09-2025',
@@ -128,20 +124,25 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
                 setStatus('Listening...');
               }
             },
-            onerror: () => setStatus('Error'),
-            onclose: () => {},
+            onerror: (e) => {
+              console.error('Live API Error:', e);
+              setStatus('Error');
+            },
+            onclose: (e) => {
+              console.log('Live API Closed:', e);
+            },
           },
           config: {
             responseModalities: [Modality.AUDIO],
             speechConfig: {
               voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
             },
-            systemInstruction: `${systemInstruction}. CRITICAL: SPEAK ONLY IN ${language}.`,
+            systemInstruction: `${systemInstruction}. CRITICAL: SPEAK ONLY IN ${language}. Be very conversational and helpful.`,
           },
         });
         aiSession = await sessionPromise;
       } catch (e) {
-        console.error(e);
+        console.error('Session initialization failed:', e);
         setStatus('Error');
       }
     };
@@ -176,9 +177,9 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
       <div className="relative">
         <div className={`absolute inset-0 rounded-full bg-orange-500 opacity-20 animate-ping duration-1000 ${status === 'Listening...' ? 'block' : 'hidden'}`}></div>
         
-        <div className={`w-32 h-32 rounded-full flex items-center justify-center border-4 ${status === 'Limited' ? 'border-yellow-500' : 'border-orange-500'} relative bg-slate-800 transition-transform ${status === 'Speaking...' ? 'scale-110 shadow-[0_0_30px_rgba(249,115,22,0.5)]' : ''}`}>
-           {status === 'Limited' ? (
-             <span className="text-4xl">⚠️</span>
+        <div className={`w-32 h-32 rounded-full flex items-center justify-center border-4 ${status === 'Error' ? 'border-red-500' : 'border-orange-500'} relative bg-slate-800 transition-transform ${status === 'Speaking...' ? 'scale-110 shadow-[0_0_30px_rgba(249,115,22,0.5)]' : ''}`}>
+           {status === 'Error' ? (
+             <span className="text-4xl">❌</span>
            ) : (
              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -188,14 +189,13 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
       </div>
 
       <h3 className="mt-12 text-2xl font-bold tracking-tight">
-        {status === 'Limited' ? 'Voice Unavailable' : status}
+        {status}
       </h3>
       
       <p className="mt-2 text-slate-400 text-center max-w-sm h-16 px-4">
         {status === 'Listening...' ? `Ask me about government schemes in ${language}!` : 
          status === 'Speaking...' ? 'YojnaGPT is responding...' : 
-         status === 'Limited' ? 'Voice interaction requires a valid API Key and internet connection. Please use text chat for offline mode.' :
-         status === 'Error' ? 'Failed to connect. Check microphone permissions or API key.' : 
+         status === 'Error' ? 'Failed to connect. Please check microphone permissions and internet.' : 
          'Connecting to YojnaGPT AI Service...'}
       </p>
 
@@ -206,11 +206,6 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
         >
           Exit Assistant
         </button>
-        {status === 'Limited' && (
-          <p className="text-[10px] text-yellow-500 uppercase font-bold tracking-widest animate-pulse">
-            Switching to Local Text Search is recommended
-          </p>
-        )}
       </div>
     </div>
   );

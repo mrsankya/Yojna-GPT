@@ -8,8 +8,8 @@ import ProfilePage from './components/ProfilePage';
 import AdminPanel from './components/AdminPanel';
 import NewSchemesPage from './components/NewSchemesPage';
 import AuthPage from './components/AuthPage';
-import { UserProfile, AppLanguage, AppView } from './types';
-import { SYSTEM_PROMPT } from './constants';
+import { UserProfile, AppLanguage, AppView, Message } from './types';
+import { SYSTEM_PROMPT, t } from './constants';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -32,6 +32,25 @@ const App: React.FC = () => {
   const [isVoiceOverlayOpen, setIsVoiceOverlayOpen] = useState(false);
   const [isComparatorOpen, setIsComparatorOpen] = useState(false);
   const [currentView, setCurrentView] = useState<AppView>('chat');
+  
+  // Lifted Messages State
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      role: 'assistant',
+      content: '', // Initialized in useEffect based on language
+      timestamp: Date.now()
+    }
+  ]);
+
+  useEffect(() => {
+    setMessages([{
+      id: '1',
+      role: 'assistant',
+      content: t('chat_intro', language),
+      timestamp: Date.now()
+    }]);
+  }, [language]);
 
   useEffect(() => {
     if (isDark) {
@@ -40,6 +59,17 @@ const App: React.FC = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [isDark]);
+
+  const addMessage = (content: string, role: 'user' | 'assistant', isVoice: boolean = false) => {
+    const newMessage: Message = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      role,
+      content,
+      timestamp: Date.now(),
+      isVoice
+    };
+    setMessages(prev => [...prev, newMessage]);
+  };
 
   if (!isAuthenticated) {
     return <AuthPage onLogin={(data) => {
@@ -67,6 +97,8 @@ const App: React.FC = () => {
           <ChatInterface 
             profile={profile}
             language={language}
+            messages={messages}
+            setMessages={setMessages}
             isVoiceActive={false}
             onToggleVoice={() => setIsVoiceOverlayOpen(true)}
           />
@@ -145,6 +177,7 @@ const App: React.FC = () => {
             setLanguage={setLanguage}
             onClose={() => setIsVoiceOverlayOpen(false)}
             systemInstruction={SYSTEM_PROMPT}
+            onAddMessage={addMessage}
           />
         )}
 

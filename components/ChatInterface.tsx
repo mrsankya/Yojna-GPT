@@ -3,33 +3,61 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Message, UserProfile } from '../types';
-import { getSchemeResponse } from '../services/geminiService';
+import { getSchemeResponse, generateSpeech } from '../services/geminiService';
 import { t } from '../constants';
 
 interface Props {
   profile: UserProfile;
   language: string;
+  messages: Message[];
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   isVoiceActive: boolean;
   onToggleVoice: () => void;
 }
 
-const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onToggleVoice }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: t('chat_intro', language),
-      timestamp: Date.now()
+// Audio Utils
+function decode(base64: string) {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function decodeAudioData(
+  data: Uint8Array,
+  ctx: AudioContext,
+  sampleRate: number,
+  numChannels: number,
+): Promise<AudioBuffer> {
+  const dataInt16 = new Int16Array(data.buffer);
+  const frameCount = dataInt16.length / numChannels;
+  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+  for (let channel = 0; channel < numChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < frameCount; i++) {
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
     }
-  ]);
-  
+  }
+  return buffer;
+}
+
+const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessages, isVoiceActive, onToggleVoice }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isDictating, setIsDictating] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [hasApiError, setHasApiError] = useState(false);
   const [dismissedInfo, setDismissedInfo] = useState(false);
+  const [isAutoSpeakEnabled, setIsAutoSpeakEnabled] = useState(false);
+  const [isBotSpeaking, setIsBotSpeaking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Audio Context Ref for playback
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const activeSources = useRef<Set<AudioBufferSourceNode>>(new Set());
 
   // Speech Recognition Setup
   const recognitionRef = useRef<any>(null);
@@ -52,19 +80,64 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
   }, []);
 
   useEffect(() => {
-    if (messages.length === 1) {
-       setMessages([{
-         id: '1',
-         role: 'assistant',
-         content: t('chat_intro', language),
-         timestamp: Date.now()
-       }]);
-    }
-  }, [language]);
-
-  useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, isLoading]);
+
+  // Handle bot speech when a new message arrives and auto-speak is on
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (isAutoSpeakEnabled && lastMessage?.role === 'assistant' && !lastMessage.isVoice && messages.length > 1) {
+      speakMessage(lastMessage.content);
+    }
+  }, [messages.length, isAutoSpeakEnabled]);
+
+  const speakMessage = async (text: string) => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    }
+    
+    if (audioContextRef.current.state === 'suspended') {
+      await audioContextRef.current.resume();
+    }
+
+    setIsBotSpeaking(true);
+    const base64Audio = await generateSpeech(text, language);
+    
+    if (base64Audio && audioContextRef.current) {
+      try {
+        const audioBuffer = await decodeAudioData(
+          decode(base64Audio),
+          audioContextRef.current,
+          24000,
+          1
+        );
+        const source = audioContextRef.current.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContextRef.current.destination);
+        
+        source.onended = () => {
+          activeSources.current.delete(source);
+          if (activeSources.current.size === 0) setIsBotSpeaking(false);
+        };
+        
+        activeSources.current.add(source);
+        source.start();
+      } catch (err) {
+        console.error("Audio playback error:", err);
+        setIsBotSpeaking(false);
+      }
+    } else {
+      setIsBotSpeaking(false);
+    }
+  };
+
+  const stopSpeaking = () => {
+    activeSources.current.forEach(source => {
+      try { source.stop(); } catch(e) {}
+    });
+    activeSources.current.clear();
+    setIsBotSpeaking(false);
+  };
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -106,6 +179,9 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
     e?.preventDefault();
     if (!input.trim() || isLoading) return;
 
+    // Stop bot from speaking if user starts a new query
+    stopSpeaking();
+
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -121,7 +197,6 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
       const history = messages.slice(-6).map(m => ({ role: m.role, content: m.content }));
       const response = await getSchemeResponse(input, history, profile, language);
       
-      // Update the error state based on the 'isLimited' flag from the service
       if (response.isLimited) {
         setHasApiError(true);
       } else {
@@ -154,14 +229,47 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
-  // Only show the informational text if there is an actual issue
   const isLimited = (!isOnline || hasApiError) && !dismissedInfo;
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-900 h-full relative">
-      {/* Informational Pill - only shown when offline or API error */}
+      {/* Informational Header with Toggle */}
+      <div className="absolute top-0 inset-x-0 h-14 border-b dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md z-20 flex items-center justify-between px-4 lg:px-8">
+        <div className="flex items-center gap-2">
+          <div className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{isOnline ? 'System Online' : 'Offline Mode'}</span>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => {
+              if (isAutoSpeakEnabled) stopSpeaking();
+              setIsAutoSpeakEnabled(!isAutoSpeakEnabled);
+            }}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${
+              isAutoSpeakEnabled 
+                ? 'bg-orange-600 text-white border-orange-500 shadow-md scale-105' 
+                : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+            }`}
+            title={isAutoSpeakEnabled ? "Disable Auto-Speak" : "Enable Auto-Speak"}
+          >
+            <div className="relative">
+               <i className={`fa-solid ${isAutoSpeakEnabled ? 'fa-volume-high' : 'fa-volume-xmark'} text-xs`}></i>
+               {isBotSpeaking && isAutoSpeakEnabled && (
+                 <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                 </span>
+               )}
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-tighter">
+              {isBotSpeaking ? 'Speaking...' : isAutoSpeakEnabled ? 'Speak ON' : 'Speak OFF'}
+            </span>
+          </button>
+        </div>
+      </div>
+
       {isLimited && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="bg-orange-600/90 backdrop-blur-md text-white text-[10px] md:text-xs font-bold py-2 px-4 rounded-full shadow-lg border border-orange-400 flex items-center gap-3 whitespace-nowrap">
             <span className="flex h-2 w-2 rounded-full bg-orange-200 animate-pulse"></span>
             issue with server you can ask me only yojna (schemes)
@@ -175,14 +283,19 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
         </div>
       )}
       
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6 pt-16">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6 pt-20">
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] lg:max-w-[70%] rounded-2xl p-4 shadow-sm ${
+            <div className={`max-w-[85%] lg:max-w-[70%] rounded-2xl p-4 shadow-sm relative ${
               m.role === 'user' 
                 ? 'bg-orange-600 text-white rounded-tr-none' 
                 : 'bg-white dark:bg-slate-800 dark:text-slate-100 rounded-tl-none border dark:border-slate-700'
             }`}>
+              {m.isVoice && (
+                <div className="absolute -top-3 -right-2 bg-orange-100 dark:bg-orange-950 text-orange-600 p-1.5 rounded-full border border-orange-200 dark:border-orange-800 shadow-sm z-10" title="Sent via Voice">
+                  <i className="fa-solid fa-microphone text-[8px]"></i>
+                </div>
+              )}
               <div className="prose-custom text-inherit dark:prose-invert">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {m.content}
@@ -270,7 +383,7 @@ const ChatInterface: React.FC<Props> = ({ profile, language, isVoiceActive, onTo
               title="Dictate message"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/>
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 116 0v6a3 3 0 0 0-3 3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/>
               </svg>
             </button>
           </div>

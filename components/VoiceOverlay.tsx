@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { INDIAN_LANGUAGES } from '../constants';
 
@@ -8,6 +8,7 @@ interface Props {
   language: string;
   setLanguage: (lang: string) => void;
   systemInstruction: string;
+  onAddMessage: (content: string, role: 'user' | 'assistant', isVoice: boolean) => void;
 }
 
 function encode(bytes: Uint8Array) {
@@ -47,9 +48,14 @@ async function decodeAudioData(
   return buffer;
 }
 
-const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemInstruction }) => {
+const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemInstruction, onAddMessage }) => {
   const [status, setStatus] = useState<'Connecting...' | 'Listening...' | 'Speaking...' | 'Error'>('Connecting...');
   
+  // Transcription State
+  const currentInputTranscription = useRef('');
+  const currentOutputTranscription = useRef('');
+  const sessionRef = useRef<any>(null);
+
   useEffect(() => {
     let nextStartTime = 0;
     const inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 16000});
@@ -59,18 +65,13 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
     
     const sources = new Set<AudioBufferSourceNode>();
     let micStream: MediaStream | null = null;
-    let aiSession: any = null;
 
     const startSession = async () => {
       try {
-        // Ensure audio contexts are resumed after user interaction
         if (inputAudioContext.state === 'suspended') await inputAudioContext.resume();
         if (outputAudioContext.state === 'suspended') await outputAudioContext.resume();
 
-        // Request microphone access
         micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        // Initialize Gemini API with the environment key
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
         
         const sessionPromise = ai.live.connect({
@@ -92,13 +93,34 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
                   mimeType: 'audio/pcm;rate=16000',
                 };
                 sessionPromise.then((session) => {
-                  session.sendRealtimeInput({ media: pcmBlob });
+                  if (session) session.sendRealtimeInput({ media: pcmBlob });
                 });
               };
               source.connect(scriptProcessor);
               scriptProcessor.connect(inputAudioContext.destination);
             },
             onmessage: async (message: LiveServerMessage) => {
+              // Handle Transcription Chunks
+              if (message.serverContent?.inputTranscription) {
+                currentInputTranscription.current += message.serverContent.inputTranscription.text;
+              }
+              if (message.serverContent?.outputTranscription) {
+                currentOutputTranscription.current += message.serverContent.outputTranscription.text;
+              }
+
+              // Sync transcripts to chat on turn completion
+              if (message.serverContent?.turnComplete) {
+                const userText = currentInputTranscription.current.trim();
+                const assistantText = currentOutputTranscription.current.trim();
+                
+                if (userText) onAddMessage(userText, 'user', true);
+                if (assistantText) onAddMessage(assistantText, 'assistant', true);
+
+                currentInputTranscription.current = '';
+                currentOutputTranscription.current = '';
+              }
+
+              // Handle Audio Output
               const base64EncodedAudioString = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
               if (base64EncodedAudioString) {
                 setStatus('Speaking...');
@@ -115,6 +137,7 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
                 nextStartTime = nextStartTime + audioBuffer.duration;
                 sources.add(source);
               }
+
               if (message.serverContent?.interrupted) {
                 for (const source of sources.values()) {
                   try { source.stop(); } catch(e) {}
@@ -134,13 +157,15 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
           },
           config: {
             responseModalities: [Modality.AUDIO],
+            inputAudioTranscription: {},
+            outputAudioTranscription: {},
             speechConfig: {
               voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
             },
             systemInstruction: `${systemInstruction}. CRITICAL: SPEAK ONLY IN ${language}. Be very conversational and helpful.`,
           },
         });
-        aiSession = await sessionPromise;
+        sessionRef.current = await sessionPromise;
       } catch (e) {
         console.error('Session initialization failed:', e);
         setStatus('Error');
@@ -153,7 +178,9 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
       micStream?.getTracks().forEach(t => t.stop());
       inputAudioContext.close().catch(() => {});
       outputAudioContext.close().catch(() => {});
-      aiSession?.close();
+      if (sessionRef.current) {
+        try { sessionRef.current.close(); } catch(e) {}
+      }
     };
   }, [language, systemInstruction]);
 

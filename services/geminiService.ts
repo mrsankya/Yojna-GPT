@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, Type, Modality, GenerateContentResponse } from "@google/genai";
 import { SYSTEM_PROMPT } from "../constants";
 import { UserProfile, ComparisonData, Scheme } from "../types";
 import { searchLocalSchemes, getLocalLatestSchemes } from "./localSearchService";
@@ -52,13 +52,49 @@ export async function getSchemeResponse(
     return { text, urls, isLimited: false };
   } catch (error) {
     console.error("Gemini Error:", error);
-    // Only return local search as a last resort if API fails
     const localResult = searchLocalSchemes(message, language);
     return { 
       text: localResult, 
       urls: [],
       isLimited: true 
     };
+  }
+}
+
+export async function generateSpeech(text: string, language: string) {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    
+    // Aggressive sanitization to prevent 500 errors
+    // 1. Remove URLs
+    let cleanText = text.replace(/https?:\/\/\S+/g, '');
+    // 2. Remove Markdown formatting characters
+    cleanText = cleanText.replace(/[*_#\[\]()<>`]/g, '');
+    // 3. Remove excessive punctuation and special chars
+    cleanText = cleanText.replace(/[^\w\s\.,!?\u0900-\u097F]/gi, ''); // Keeps English and Devanagari (Hindi)
+    // 4. Limit length for TTS stability
+    cleanText = cleanText.substring(0, 600).trim();
+    
+    if (!cleanText) return null;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: `Read this text clearly in ${language}: ${cleanText}` }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Kore' },
+          },
+        },
+      },
+    });
+
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    return base64Audio;
+  } catch (error) {
+    console.error("TTS Error:", error);
+    return null;
   }
 }
 

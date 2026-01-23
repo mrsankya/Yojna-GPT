@@ -26,6 +26,7 @@ export async function getSchemeResponse(
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     const profileContext = `User Profile Context: ${JSON.stringify(profile)}`;
     const locationContext = userLocation ? `User Lat/Lng: ${userLocation.lat}, ${userLocation.lng}` : '';
+    const identityEnforcement = `CRITICAL: The current user is named ${profile.fullName}. ALWAYS address them by this name or appropriately if they are an Admin (${profile.isAdmin}). Never refer to the user as "Arjun".`;
     
     const contents = [
       ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'model', parts: [{ text: h.content }] })),
@@ -36,7 +37,7 @@ export async function getSchemeResponse(
       model: 'gemini-3-flash-preview',
       contents: contents as any,
       config: {
-        systemInstruction: `${SYSTEM_PROMPT}\n\n${profileContext}\n${locationContext}\nCRITICAL: Reply ONLY in ${language}. You are a helpful AI bot. If the user says hi/hello/namaste, greet them warmly and ask how you can help with government schemes.`,
+        systemInstruction: `${SYSTEM_PROMPT}\n\n${profileContext}\n${locationContext}\n${identityEnforcement}\nCRITICAL: Reply ONLY in ${language}. You are a helpful AI bot. If the user says hi/hello/namaste, greet them warmly and ask how you can help with government schemes.`,
         tools: [{ googleSearch: {} }],
       },
     });
@@ -66,13 +67,9 @@ export async function generateSpeech(text: string, language: string) {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     
     // Aggressive sanitization to prevent 500 errors
-    // 1. Remove URLs
     let cleanText = text.replace(/https?:\/\/\S+/g, '');
-    // 2. Remove Markdown formatting characters
     cleanText = cleanText.replace(/[*_#\[\]()<>`]/g, '');
-    // 3. Remove excessive punctuation and special chars
     cleanText = cleanText.replace(/[^\w\s\.,!?\u0900-\u097F]/gi, ''); // Keeps English and Devanagari (Hindi)
-    // 4. Limit length for TTS stability
     cleanText = cleanText.substring(0, 600).trim();
     
     if (!cleanText) return null;

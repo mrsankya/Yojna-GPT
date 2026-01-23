@@ -27,6 +27,7 @@ export interface UserProfile {
   profileCompletion?: number;
   familyMembers?: FamilyMember[];
   citizenPoints?: number;
+  isAdmin?: boolean;
 }
 
 export interface Scheme {

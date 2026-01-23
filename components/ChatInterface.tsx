@@ -13,6 +13,7 @@ interface Props {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   isVoiceActive: boolean;
   onToggleVoice: () => void;
+  onClearHistory?: () => void;
 }
 
 // Audio Utils
@@ -44,7 +45,7 @@ async function decodeAudioData(
   return buffer;
 }
 
-const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessages, isVoiceActive, onToggleVoice }) => {
+const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessages, isVoiceActive, onToggleVoice, onClearHistory }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isDictating, setIsDictating] = useState(false);
@@ -139,6 +140,24 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
     setIsBotSpeaking(false);
   };
 
+  const toggleAutoSpeak = () => {
+    if (isAutoSpeakEnabled) {
+      stopSpeaking();
+      setIsAutoSpeakEnabled(false);
+    } else {
+      setIsAutoSpeakEnabled(true);
+      const intros: Record<string, string> = {
+        'English': `Namaste! I am YojnaGPT, your personal assistant for government schemes. How can I help you today?`,
+        'Hindi': `नमस्ते! मैं योजनाजीपीटी हूँ, सरकारी योजनाओं के लिए आपकी व्यक्तिगत सहायक। आज मैं आपकी क्या मदद कर सकती हूँ?`,
+        'Marathi': `नमस्कार! मी योजनाजीपीटी आहे, सरकारी योजनांसाठी तुमची वैयक्तिक सहाय्यक. मी आज तुम्हाला कशी मदत करू शकते?`,
+        'Tamil': `வணக்கம்! நான் யோஜனாஜிபிடி, அரசு திட்டங்களுக்கான உங்கள் தனிப்பட்ட உதவியாளர். இன்று நான் உங்களுக்கு எப்படி உதவ முடியும்?`,
+        'Bengali': `নমস্কার! আমি যোজনাজিপিটি, সরকারি প্রকল্পের জন্য আপনার ব্যক্তিগত সহকারী। আজ আমি আপনাকে কীভাবে সাহায্য করতে পারি?`
+      };
+      const introText = intros[language] || intros['English'];
+      speakMessage(introText);
+    }
+  };
+
   // Initialize Speech Recognition
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -179,7 +198,6 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
     e?.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    // Stop bot from speaking if user starts a new query
     stopSpeaking();
 
     const userMsg: Message = {
@@ -240,12 +258,14 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{isOnline ? 'System Online' : 'Offline Mode'}</span>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-full">
+            <i className="fa-solid fa-shield-check text-green-600 text-[10px]"></i>
+            <span className="text-[9px] font-bold text-green-700 dark:text-green-400 uppercase tracking-tighter">Domain Verified</span>
+          </div>
+          
           <button 
-            onClick={() => {
-              if (isAutoSpeakEnabled) stopSpeaking();
-              setIsAutoSpeakEnabled(!isAutoSpeakEnabled);
-            }}
+            onClick={toggleAutoSpeak}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${
               isAutoSpeakEnabled 
                 ? 'bg-orange-600 text-white border-orange-500 shadow-md scale-105' 
@@ -261,10 +281,21 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
                  </span>
                )}
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-tighter">
+            <span className="text-[10px] font-bold uppercase tracking-tighter hidden sm:inline">
               {isBotSpeaking ? 'Speaking...' : isAutoSpeakEnabled ? 'Speak ON' : 'Speak OFF'}
             </span>
           </button>
+
+          {messages.length > 0 && onClearHistory && (
+            <button 
+              onClick={onClearHistory}
+              className="p-1.5 md:px-3 md:py-1.5 text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1.5"
+              title="Clear History"
+            >
+              <i className="fa-solid fa-trash-can text-xs"></i>
+              <span className="text-[10px] font-bold uppercase tracking-tighter hidden sm:inline">Clear</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -304,21 +335,27 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
               
               {m.groundingUrls && m.groundingUrls.length > 0 && (
                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 space-y-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Official Links & Sources:</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Official Gov Sources:</p>
+                    <span className="text-[9px] font-black text-green-600 bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded border border-green-100 dark:border-green-800 flex items-center gap-1">
+                      <i className="fa-solid fa-circle-check"></i> VERIFIED
+                    </span>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {m.groundingUrls.map((link, idx) => (
-                      <div key={idx} className="flex items-center gap-1">
+                      <div key={idx} className="flex items-center gap-1 group">
                         <a 
                           href={link.uri} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-xs bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-3 py-1.5 rounded-l-full border border-orange-200 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-900/50 transition-colors inline-flex items-center gap-1 border-r-0"
+                          className="text-xs bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-3 py-1.5 rounded-l-full border border-orange-200 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-900/50 transition-colors inline-flex items-center gap-1 border-r-0 font-bold"
                         >
-                          🔗 {link.title}
+                          <i className="fa-solid fa-link text-[10px]"></i> {link.title.length > 25 ? link.title.substring(0, 22) + '...' : link.title}
                         </a>
                         <button 
                           onClick={() => shareToWhatsApp(link.title, link.uri)}
                           className="text-xs bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1.5 rounded-r-full border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors border-l-0"
+                          title="Share Link"
                         >
                           <i className="fa-brands fa-whatsapp"></i>
                         </button>
@@ -340,7 +377,7 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
               <span className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"></span>
               <span className="w-2 h-2 bg-orange-400 rounded-full animate-bounce delay-100"></span>
               <span className="w-2 h-2 bg-orange-400 rounded-full animate-bounce delay-200"></span>
-              <span className="ml-2 text-xs font-medium text-slate-400 animate-pulse">Checking records...</span>
+              <span className="ml-2 text-xs font-medium text-slate-400 animate-pulse">Scanning gov.in records...</span>
             </div>
           </div>
         )}

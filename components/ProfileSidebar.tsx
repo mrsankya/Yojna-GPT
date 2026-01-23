@@ -101,7 +101,7 @@ const ProfileSidebar: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* User Progress Card - Stabilized Height and Fixed Indicator */}
+      {/* User Progress Card */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 p-5 rounded-3xl shadow-xl border border-slate-700/50 relative overflow-hidden min-h-[140px] flex flex-col justify-center">
         <button 
           onClick={() => setShowPointsInfo(!showPointsInfo)}
@@ -135,7 +135,10 @@ const ProfileSidebar: React.FC<Props> = ({
               <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-2xl shadow-inner backdrop-blur-sm border border-white/5">{tier.icon}</div>
               <div>
                 <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest leading-none mb-1">{tier.label}</p>
-                <h3 className="text-white font-bold text-lg leading-none">{profile.fullName?.split(' ')[0]}</h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-white font-bold text-lg leading-none">{profile.fullName?.split(' ')[0]}</h3>
+                  {profile.isAdmin && <i className="fa-solid fa-shield-check text-orange-400 text-[10px]" title="System Admin"></i>}
+                </div>
               </div>
             </div>
             <div className="space-y-2">
@@ -146,7 +149,7 @@ const ProfileSidebar: React.FC<Props> = ({
               <div className="w-full h-2 bg-slate-800/50 rounded-full overflow-hidden border border-white/5">
                 <div 
                   className={`h-full bg-gradient-to-r ${tier.color} transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(249,115,22,0.3)]`} 
-                  style={{ width: `${Math.max(tier.percent, 5)}%` }} // Minimum 5% width to make it visible
+                  style={{ width: `${Math.max(tier.percent, 5)}%` }} 
                 ></div>
               </div>
             </div>
@@ -159,7 +162,7 @@ const ProfileSidebar: React.FC<Props> = ({
         <NavButton view="chat" icon="💬" label={t('nav_chat', language)} />
         <NavButton view="discovery" icon="✨" label={t('nav_discovery', language)} badge="NEW" />
         <NavButton view="profile" icon="👤" label={t('nav_profile', language)} />
-        <NavButton view="admin" icon="🛡️" label={t('nav_admin', language)} />
+        {profile.isAdmin && <NavButton view="admin" icon="🛡️" label={t('nav_admin', language)} />}
       </nav>
 
       <div className="space-y-3">

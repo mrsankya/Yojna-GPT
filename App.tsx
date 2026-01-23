@@ -8,55 +8,88 @@ import ProfilePage from './components/ProfilePage';
 import AdminPanel from './components/AdminPanel';
 import NewSchemesPage from './components/NewSchemesPage';
 import AuthPage from './components/AuthPage';
+import ProfileSetupModal from './components/ProfileSetupModal';
 import { UserProfile, AppLanguage, AppView, Message } from './types';
 import { SYSTEM_PROMPT, t } from './constants';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
+  
   const [profile, setProfile] = useState<UserProfile>({
     category: 'General',
     disability: false,
-    fullName: 'Arjun Sharma',
+    fullName: '',
     location: 'Lucknow, Uttar Pradesh',
-    email: 'arjun.sharma@example.in',
-    phoneNumber: '+91 98765 43210',
+    email: '',
+    phoneNumber: '',
     state: 'Uttar Pradesh',
     age: 28,
     income: '1-3 Lakhs',
-    occupation: 'Farmer',
-    citizenPoints: 1450
+    occupation: 'Citizen',
+    citizenPoints: 1450,
+    isAdmin: false
   });
+  
   const [language, setLanguage] = useState<string>(AppLanguage.ENGLISH);
   const [isDark, setIsDark] = useState(false);
   const [isVoiceOverlayOpen, setIsVoiceOverlayOpen] = useState(false);
   const [isComparatorOpen, setIsComparatorOpen] = useState(false);
   const [currentView, setCurrentView] = useState<AppView>('chat');
   
-  // Lifted Messages State
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: '', // Initialized in useEffect based on language
-      timestamp: Date.now()
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
 
+  // 1. Initial Load: Check for active session
   useEffect(() => {
-    setMessages([{
-      id: '1',
-      role: 'assistant',
-      content: t('chat_intro', language),
-      timestamp: Date.now()
-    }]);
-  }, [language]);
+    const savedUser = localStorage.getItem('yojnagpt_active_user');
+    if (savedUser) {
+      const parsedUser = JSON.parse(savedUser);
+      setProfile(parsedUser);
+      setIsAuthenticated(true);
+      
+      const savedHistory = localStorage.getItem(`yojnagpt_history_${parsedUser.fullName}`);
+      if (savedHistory) {
+        setMessages(JSON.parse(savedHistory));
+      }
 
+      const setupDismissed = localStorage.getItem(`yojnagpt_setup_dismissed_${parsedUser.fullName}`);
+      if (!setupDismissed && parsedUser.fullName && (!parsedUser.age || parsedUser.age === 28)) {
+        setShowSetup(true);
+      }
+    }
+    
+    const savedTheme = localStorage.getItem('yojnagpt_theme');
+    if (savedTheme === 'dark') setIsDark(true);
+  }, []);
+
+  // 2. Persistent Save: Sync messages to local storage
+  useEffect(() => {
+    if (isAuthenticated && profile.fullName) {
+      localStorage.setItem(`yojnagpt_history_${profile.fullName}`, JSON.stringify(messages));
+    }
+  }, [messages, isAuthenticated, profile.fullName]);
+
+  // 3. Welcome Message logic
+  useEffect(() => {
+    if (isAuthenticated && messages.length === 0) {
+      setMessages([{
+        id: 'welcome-msg',
+        role: 'assistant',
+        content: t('chat_intro', language),
+        timestamp: Date.now()
+      }]);
+    }
+  }, [language, isAuthenticated, messages.length]);
+
+  // 4. Dark Mode Handler
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('yojnagpt_theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('yojnagpt_theme', 'light');
     }
   }, [isDark]);
 
@@ -71,39 +104,66 @@ const App: React.FC = () => {
     setMessages(prev => [...prev, newMessage]);
   };
 
-  if (!isAuthenticated) {
-    return <AuthPage onLogin={(data) => {
-      const updatedProfile = { 
-        ...profile, 
-        ...data,
-        citizenPoints: data.isDemo ? 5000 : 1450 // Demo mode unlocks all achievements
-      };
-      setProfile(updatedProfile);
-      setIsAuthenticated(true);
-    }} />;
-  }
-
-  const renderView = () => {
-    switch (currentView) {
-      case 'profile':
-        return <ProfilePage profile={profile} setProfile={setProfile} language={language} />;
-      case 'admin':
-        return <AdminPanel language={language} />;
-      case 'discovery':
-        return <NewSchemesPage language={language} />;
-      case 'chat':
-      default:
-        return (
-          <ChatInterface 
-            profile={profile}
-            language={language}
-            messages={messages}
-            setMessages={setMessages}
-            isVoiceActive={false}
-            onToggleVoice={() => setIsVoiceOverlayOpen(true)}
-          />
-        );
+  const handleClearHistory = () => {
+    if (window.confirm("Are you sure you want to clear your chat history? This cannot be undone.")) {
+      // Clear logic: Set to empty array, which will then trigger the Welcome Message effect
+      setMessages([]);
+      if (profile.fullName) {
+        localStorage.removeItem(`yojnagpt_history_${profile.fullName}`);
+      }
     }
+  };
+
+  const handleLogin = (data: any) => {
+    const updatedProfile = { 
+      ...profile, 
+      ...data,
+      citizenPoints: data.isDemo ? 5000 : (data.citizenPoints || 1450)
+    };
+    
+    setProfile(updatedProfile);
+    setIsAuthenticated(true);
+    localStorage.setItem('yojnagpt_active_user', JSON.stringify(updatedProfile));
+    
+    const savedHistory = localStorage.getItem(`yojnagpt_history_${updatedProfile.fullName}`);
+    if (savedHistory) {
+      setMessages(JSON.parse(savedHistory));
+    } else {
+      setMessages([]); 
+    }
+
+    const setupDismissed = localStorage.getItem(`yojnagpt_setup_dismissed_${updatedProfile.fullName}`);
+    setShowSetup(!setupDismissed);
+  };
+
+  const handleSaveSetup = (updatedProfile: UserProfile) => {
+    setProfile(updatedProfile);
+    setShowSetup(false);
+    localStorage.setItem('yojnagpt_active_user', JSON.stringify(updatedProfile));
+    localStorage.setItem(`yojnagpt_setup_dismissed_${updatedProfile.fullName}`, 'true');
+    addMessage(`Profile updated successfully! I am now ready to provide personalized recommendations for ${updatedProfile.occupation} in ${updatedProfile.location}.`, 'assistant');
+  };
+
+  const handleSkipSetup = () => {
+    setShowSetup(false);
+    if (profile.fullName) {
+      localStorage.setItem(`yojnagpt_setup_dismissed_${profile.fullName}`, 'true');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('yojnagpt_active_user');
+    setMessages([]);
+    setCurrentView('chat');
+    setShowSetup(false);
+    setProfile(prev => ({ 
+      ...prev, 
+      fullName: '', 
+      isAdmin: false, 
+      isDemo: false,
+      occupation: 'Citizen'
+    }));
   };
 
   const getTier = (points: number) => {
@@ -112,6 +172,10 @@ const App: React.FC = () => {
     if (points >= 1000) return 'Silver Citizen';
     return 'Bronze Citizen';
   };
+
+  if (!isAuthenticated) {
+    return <AuthPage onLogin={handleLogin} />;
+  }
 
   return (
     <div className="flex flex-col lg:flex-row h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
@@ -130,7 +194,7 @@ const App: React.FC = () => {
           setCurrentView(view);
           setIsSidebarOpen(false);
         }}
-        onLogout={() => setIsAuthenticated(false)}
+        onLogout={handleLogout}
       />
       
       {isSidebarOpen && (
@@ -169,7 +233,39 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {renderView()}
+        {currentView === 'profile' ? (
+          <ProfilePage profile={profile} setProfile={setProfile} language={language} />
+        ) : currentView === 'admin' ? (
+          profile.isAdmin ? <AdminPanel language={language} /> : <ChatInterface 
+            profile={profile}
+            language={language}
+            messages={messages}
+            setMessages={setMessages}
+            isVoiceActive={false}
+            onToggleVoice={() => setIsVoiceOverlayOpen(true)}
+            onClearHistory={handleClearHistory}
+          />
+        ) : currentView === 'discovery' ? (
+          <NewSchemesPage language={language} />
+        ) : (
+          <ChatInterface 
+            profile={profile}
+            language={language}
+            messages={messages}
+            setMessages={setMessages}
+            isVoiceActive={false}
+            onToggleVoice={() => setIsVoiceOverlayOpen(true)}
+            onClearHistory={handleClearHistory}
+          />
+        )}
+
+        {showSetup && (
+          <ProfileSetupModal 
+            profile={profile} 
+            onSave={handleSaveSetup} 
+            onSkip={handleSkipSetup} 
+          />
+        )}
 
         {isVoiceOverlayOpen && (
           <VoiceOverlay 

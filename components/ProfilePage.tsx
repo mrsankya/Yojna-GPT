@@ -15,7 +15,7 @@ const ProfilePage: React.FC<Props> = ({ profile, setProfile, language }) => {
   const points = profile.citizenPoints || 0;
 
   const completionPercentage = useMemo(() => {
-    const fields: (keyof UserProfile)[] = ['fullName', 'email', 'phoneNumber', 'location', 'age', 'occupation', 'category'];
+    const fields: (keyof UserProfile)[] = ['fullName', 'email', 'phoneNumber', 'location', 'age', 'occupation', 'category', 'education', 'income'];
     const filled = fields.filter(f => !!profile[f]).length;
     return Math.round((filled / fields.length) * 100);
   }, [profile]);
@@ -41,6 +41,18 @@ const ProfilePage: React.FC<Props> = ({ profile, setProfile, language }) => {
     setTempProfile(profile);
     setIsEditing(false);
   };
+
+  const profileFields = [
+    { label: 'Full Name', value: tempProfile.fullName || '', name: 'fullName', type: 'text' },
+    { label: 'Email Address', value: tempProfile.email || '', name: 'email', type: 'email' },
+    { label: 'Phone Number', value: tempProfile.phoneNumber || '', name: 'phoneNumber', type: 'tel' },
+    { label: 'Location/State', value: tempProfile.location || '', name: 'location', type: 'text' },
+    { label: 'Age', value: tempProfile.age || '', name: 'age', type: 'number' },
+    { label: 'Occupation', value: tempProfile.occupation || '', name: 'occupation', type: 'text' },
+    { label: 'Education', value: tempProfile.education || '', name: 'education', type: 'select', options: ['Primary', '10th Pass', '12th Pass', 'Graduate', 'Post Graduate', 'Diploma/ITI'] },
+    { label: 'Income', value: tempProfile.income || '', name: 'income', type: 'select', options: ['Below 1 Lakh', '1-3 Lakhs', '3-5 Lakhs', '5-8 Lakhs', 'Above 8 Lakhs'] },
+    { label: 'Category', value: tempProfile.category || '', name: 'category', type: 'select', options: ['General', 'SC', 'ST', 'OBC'] },
+  ];
 
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900 p-4 lg:p-8 animate-in fade-in slide-in-from-right-4 duration-500">
@@ -95,7 +107,7 @@ const ProfilePage: React.FC<Props> = ({ profile, setProfile, language }) => {
                 </p>
                 <span className="w-1 h-1 bg-slate-300 rounded-full hidden md:block"></span>
                 <p className="text-slate-500 dark:text-slate-400 text-sm flex items-center gap-1">
-                  <i className="fa-solid fa-briefcase text-orange-500"></i> {profile.occupation || 'Occupation not set'}
+                  <i className="fa-solid fa-graduation-cap text-orange-500"></i> {profile.education || 'Education not set'}
                 </p>
               </div>
             </div>
@@ -183,30 +195,34 @@ const ProfilePage: React.FC<Props> = ({ profile, setProfile, language }) => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[
-                  { label: 'Full Name', value: tempProfile.fullName || '', name: 'fullName', type: 'text' },
-                  { label: 'Email Address', value: tempProfile.email || '', name: 'email', type: 'email' },
-                  { label: 'Phone Number', value: tempProfile.phoneNumber || '', name: 'phoneNumber', type: 'tel' },
-                  { label: 'Location/State', value: tempProfile.location || '', name: 'location', type: 'text' },
-                  { label: 'Age', value: tempProfile.age || '', name: 'age', type: 'number' },
-                  { label: 'Occupation', value: tempProfile.occupation || '', name: 'occupation', type: 'text' },
-                ].map((item, idx) => (
+                {profileFields.map((item, idx) => (
                   <div key={idx} className={`p-4 rounded-2xl border transition-all ${
                     isEditing 
                       ? 'bg-orange-50/30 dark:bg-orange-950/10 border-orange-200 dark:border-orange-800' 
                       : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800'
                   }`}>
                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">{item.label}</p>
-                    <input 
-                      type={item.type}
-                      name={item.name}
-                      value={item.value}
-                      onChange={handleChange}
-                      readOnly={!isEditing}
-                      className={`w-full bg-transparent font-semibold text-slate-900 dark:text-slate-200 outline-none ${
-                        !isEditing ? 'cursor-default' : 'cursor-text'
-                      }`}
-                    />
+                    {isEditing && item.type === 'select' ? (
+                      <select
+                        name={item.name}
+                        value={item.value}
+                        onChange={handleChange}
+                        className="w-full bg-transparent font-semibold text-slate-900 dark:text-slate-200 outline-none cursor-pointer"
+                      >
+                        {item.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                      </select>
+                    ) : (
+                      <input 
+                        type={item.type === 'select' ? 'text' : item.type}
+                        name={item.name}
+                        value={item.value}
+                        onChange={handleChange}
+                        readOnly={!isEditing}
+                        className={`w-full bg-transparent font-semibold text-slate-900 dark:text-slate-200 outline-none ${
+                          !isEditing ? 'cursor-default' : 'cursor-text'
+                        }`}
+                      />
+                    )}
                   </div>
                 ))}
               </div>

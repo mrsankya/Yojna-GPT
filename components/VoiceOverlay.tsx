@@ -51,12 +51,16 @@ async function decodeAudioData(
 const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemInstruction, onAddMessage }) => {
   const [status, setStatus] = useState<'Connecting...' | 'Listening...' | 'Speaking...' | 'Error'>('Connecting...');
   
-  // Transcription State
   const currentInputTranscription = useRef('');
   const currentOutputTranscription = useRef('');
   const sessionRef = useRef<any>(null);
+  const connectionInProgress = useRef(false);
+  const isMounted = useRef(true);
 
   useEffect(() => {
+    isMounted.current = true;
+    if (connectionInProgress.current) return;
+    
     let nextStartTime = 0;
     const inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 16000});
     const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 24000});
@@ -67,20 +71,31 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
     let micStream: MediaStream | null = null;
 
     const startSession = async () => {
+      if (connectionInProgress.current) return;
+      connectionInProgress.current = true;
+
       try {
+        if (!isMounted.current) return;
+
         if (inputAudioContext.state === 'suspended') await inputAudioContext.resume();
         if (outputAudioContext.state === 'suspended') await outputAudioContext.resume();
 
+        // Start Live Session
         micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // Ensure we use a fresh instance to avoid socket reuse errors
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
         
         const sessionPromise = ai.live.connect({
           model: 'gemini-2.5-flash-native-audio-preview-12-2025',
           callbacks: {
             onopen: () => {
+              if (!isMounted.current) return;
               setStatus('Listening...');
+              
               const source = inputAudioContext.createMediaStreamSource(micStream!);
               const scriptProcessor = inputAudioContext.createScriptProcessor(4096, 1, 1);
+              
               scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
                 const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
                 const l = inputData.length;
@@ -92,20 +107,20 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
                   data: encode(new Uint8Array(int16.buffer)),
                   mimeType: 'audio/pcm;rate=16000',
                 };
+                
                 sessionPromise.then((session) => {
-                  if (session) session.sendRealtimeInput({ media: pcmBlob });
+                  if (session && isMounted.current) {
+                    session.sendRealtimeInput({ media: pcmBlob });
+                  }
                 });
               };
+              
               source.connect(scriptProcessor);
               scriptProcessor.connect(inputAudioContext.destination);
-
-              // Auto-Introduction logic for Live Audio
-              sessionPromise.then((session) => {
-                session.send({ text: `Please introduce yourself briefly as YojnaGPT, a multilingual assistant for government schemes, in ${language}. Keep it very warm and ask how you can help today.` });
-              });
             },
             onmessage: async (message: LiveServerMessage) => {
-              // Handle Transcription Chunks
+              if (!isMounted.current) return;
+              
               if (message.serverContent?.inputTranscription) {
                 currentInputTranscription.current += message.serverContent.inputTranscription.text;
               }
@@ -113,40 +128,36 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
                 currentOutputTranscription.current += message.serverContent.outputTranscription.text;
               }
 
-              // Sync transcripts to chat on turn completion
               if (message.serverContent?.turnComplete) {
-                const userText = currentInputTranscription.current.trim();
-                const assistantText = currentOutputTranscription.current.trim();
-                
-                if (userText) onAddMessage(userText, 'user', true);
-                if (assistantText) onAddMessage(assistantText, 'assistant', true);
-
+                const userT = currentInputTranscription.current.trim();
+                const assistantT = currentOutputTranscription.current.trim();
+                if (userT) onAddMessage(userT, 'user', true);
+                if (assistantT) onAddMessage(assistantT, 'assistant', true);
                 currentInputTranscription.current = '';
                 currentOutputTranscription.current = '';
               }
 
-              // Handle Audio Output
-              const base64EncodedAudioString = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
-              if (base64EncodedAudioString) {
+              const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+              if (base64Audio) {
                 setStatus('Speaking...');
                 nextStartTime = Math.max(nextStartTime, outputAudioContext.currentTime);
-                const audioBuffer = await decodeAudioData(decode(base64EncodedAudioString), outputAudioContext, 24000, 1);
+                const buffer = await decodeAudioData(decode(base64Audio), outputAudioContext, 24000, 1);
                 const source = outputAudioContext.createBufferSource();
-                source.buffer = audioBuffer;
+                source.buffer = buffer;
                 source.connect(outputNode);
                 source.addEventListener('ended', () => {
                   sources.delete(source);
                   if (sources.size === 0) setStatus('Listening...');
                 });
                 source.start(nextStartTime);
-                nextStartTime = nextStartTime + audioBuffer.duration;
+                nextStartTime = nextStartTime + buffer.duration;
                 sources.add(source);
               }
 
               if (message.serverContent?.interrupted) {
-                for (const source of sources.values()) {
-                  try { source.stop(); } catch(e) {}
-                  sources.delete(source);
+                for (const s of sources.values()) {
+                  try { s.stop(); } catch(e) {}
+                  sources.delete(s);
                 }
                 nextStartTime = 0;
                 setStatus('Listening...');
@@ -154,10 +165,14 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
             },
             onerror: (e) => {
               console.error('Live API Error:', e);
-              setStatus('Error');
+              if (isMounted.current) {
+                setStatus('Error');
+                connectionInProgress.current = false;
+              }
             },
             onclose: (e) => {
-              console.log('Live API Closed:', e);
+              console.log('Live API Closed', e);
+              connectionInProgress.current = false;
             },
           },
           config: {
@@ -167,19 +182,24 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
             speechConfig: {
               voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
             },
-            systemInstruction: `${systemInstruction}. CRITICAL: SPEAK ONLY IN ${language}. Be very conversational and helpful.`,
+            // Removed strict prompt for "INTRODUCE YOURSELF" to prevent immediate double responses.
+            // Model will react to the connection naturally or after silence.
+            systemInstruction: `${systemInstruction}. CRITICAL: YOUR NAME IS YojnaGPT. YOU ARE A VOICE ASSISTANT. SPEAK NATIVELY IN ${language}. BE THOROUGH BUT BRIEF. ALWAYS GIVE BENEFITS AND DOCUMENTS FOR SCHEMES.`,
           },
         });
         sessionRef.current = await sessionPromise;
       } catch (e) {
         console.error('Session initialization failed:', e);
-        setStatus('Error');
+        if (isMounted.current) setStatus('Error');
+        connectionInProgress.current = false;
       }
     };
 
     startSession();
 
     return () => {
+      isMounted.current = false;
+      connectionInProgress.current = false;
       micStream?.getTracks().forEach(t => t.stop());
       inputAudioContext.close().catch(() => {});
       outputAudioContext.close().catch(() => {});
@@ -187,7 +207,7 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
         try { sessionRef.current.close(); } catch(e) {}
       }
     };
-  }, [language, systemInstruction]);
+  }, [language]);
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center text-white p-6">
@@ -227,8 +247,8 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
       <p className="mt-2 text-slate-400 text-center max-w-sm h-16 px-4">
         {status === 'Listening...' ? `Ask me about government schemes in ${language}!` : 
          status === 'Speaking...' ? 'YojnaGPT is responding...' : 
-         status === 'Error' ? 'Failed to connect. Please check microphone permissions and internet.' : 
-         'Connecting to YojnaGPT AI Service...'}
+         status === 'Error' ? 'Network connection lost. Please check your internet and microphone permissions.' : 
+         'Connecting to YojnaGPT...'}
       </p>
 
       <div className="mt-12 flex flex-col gap-4 items-center">

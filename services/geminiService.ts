@@ -26,7 +26,7 @@ export async function getSchemeResponse(
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     const profileContext = `User Profile Context: ${JSON.stringify(profile)}`;
     const locationContext = userLocation ? `User Lat/Lng: ${userLocation.lat}, ${userLocation.lng}` : '';
-    const identityEnforcement = `CRITICAL: The current user is named ${profile.fullName}. ALWAYS address them by this name or appropriately if they are an Admin (${profile.isAdmin}). Never refer to the user as "Arjun".`;
+    const identityEnforcement = `CRITICAL: The current user is named ${profile.fullName}. ALWAYS address them by this name.`;
     
     const contents = [
       ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'model', parts: [{ text: h.content }] })),
@@ -37,7 +37,7 @@ export async function getSchemeResponse(
       model: 'gemini-3-flash-preview',
       contents: contents as any,
       config: {
-        systemInstruction: `${SYSTEM_PROMPT}\n\n${profileContext}\n${locationContext}\n${identityEnforcement}\nCRITICAL: Reply ONLY in ${language}. You are a helpful AI bot. If the user says hi/hello/namaste, greet them warmly and ask how you can help with government schemes.`,
+        systemInstruction: `${SYSTEM_PROMPT}\n\n${profileContext}\n${locationContext}\n${identityEnforcement}\n\nREPLY IN ${language}. Be extremely thorough. For any scheme mentioned, you MUST explicitly list: 1. Benefits 2. Detailed Eligibility 3. Documents Checklist.`,
         tools: [{ googleSearch: {} }],
       },
     });
@@ -46,9 +46,9 @@ export async function getSchemeResponse(
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     
     const urls = groundingChunks?.map((chunk: any) => ({
-      title: chunk.web?.title || 'Gov Source',
+      title: chunk.web?.title || 'Official Gov Portal',
       uri: chunk.web?.uri || '#'
-    })).filter((u: any) => u.uri !== '#');
+    })).filter((u: any) => u.uri !== '#' && (u.uri.includes('.gov.in') || u.uri.includes('.nic.in') || u.uri.includes('.in')));
 
     return { text, urls, isLimited: false };
   } catch (error) {
@@ -69,7 +69,7 @@ export async function generateSpeech(text: string, language: string) {
     // Aggressive sanitization to prevent 500 errors
     let cleanText = text.replace(/https?:\/\/\S+/g, '');
     cleanText = cleanText.replace(/[*_#\[\]()<>`]/g, '');
-    cleanText = cleanText.replace(/[^\w\s\.,!?\u0900-\u097F]/gi, ''); // Keeps English and Devanagari (Hindi)
+    cleanText = cleanText.replace(/[^\w\s\.,!?\u0900-\u097F]/gi, ''); 
     cleanText = cleanText.substring(0, 600).trim();
     
     if (!cleanText) return null;
@@ -97,14 +97,14 @@ export async function generateSpeech(text: string, language: string) {
 
 export async function compareSchemes(schemeNames: string[], language: string): Promise<ComparisonData> {
   if (!navigator.onLine) {
-     throw new Error("Local comparison tool is coming soon. Please connect to the internet for AI-powered comparison.");
+     throw new Error("Connect to the internet for AI-powered comparison.");
   }
   
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: [{ role: 'user', parts: [{ text: `Compare: ${schemeNames.join(' and ')}. Output JSON in ${language}.` }] }],
+      contents: [{ role: 'user', parts: [{ text: `Compare ${schemeNames.join(' and ')}. Output JSON in ${language} with Benefits, Eligibility, and Documents.` }] }],
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -120,7 +120,7 @@ export async function compareSchemes(schemeNames: string[], language: string): P
     });
     return JSON.parse(response.text);
   } catch (error) {
-    throw new Error("Unable to perform comparison right now. Please check your internet connection.");
+    throw new Error("Unable to perform comparison right now.");
   }
 }
 
@@ -133,7 +133,7 @@ export async function getLatestSchemes(language: string): Promise<Partial<Scheme
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: [{ role: 'user', parts: [{ text: `List 5 latest Indian gov schemes in ${language}.` }] }],
+      contents: [{ role: 'user', parts: [{ text: `List 5 latest Indian gov schemes in ${language} with full details.` }] }],
       config: {
         responseMimeType: "application/json",
         responseSchema: {

@@ -65,7 +65,7 @@ const App: React.FC = () => {
 
   // 2. Persistent Save: Sync messages to local storage
   useEffect(() => {
-    if (isAuthenticated && profile.fullName) {
+    if (isAuthenticated && profile.fullName && messages.length > 0) {
       localStorage.setItem(`yojnagpt_history_${profile.fullName}`, JSON.stringify(messages));
     }
   }, [messages, isAuthenticated, profile.fullName]);
@@ -106,11 +106,12 @@ const App: React.FC = () => {
 
   const handleClearHistory = () => {
     if (window.confirm("Are you sure you want to clear your chat history? This cannot be undone.")) {
-      // Clear logic: Set to empty array, which will then trigger the Welcome Message effect
-      setMessages([]);
+      // Step 1: Immediately clear localStorage to prevent race condition with effect
       if (profile.fullName) {
         localStorage.removeItem(`yojnagpt_history_${profile.fullName}`);
       }
+      // Step 2: Update state, which triggers a re-render and re-adds welcome message via effect
+      setMessages([]);
     }
   };
 
@@ -177,6 +178,38 @@ const App: React.FC = () => {
     return <AuthPage onLogin={handleLogin} />;
   }
 
+  // Unified Rendering Logic
+  const renderContent = () => {
+    switch (currentView) {
+      case 'profile':
+        return <ProfilePage profile={profile} setProfile={setProfile} language={language} />;
+      case 'admin':
+        return profile.isAdmin ? <AdminPanel language={language} /> : <ChatInterface 
+          profile={profile}
+          language={language}
+          messages={messages}
+          setMessages={setMessages}
+          isVoiceActive={false}
+          onToggleVoice={() => setIsVoiceOverlayOpen(true)}
+          onClearHistory={handleClearHistory}
+        />;
+      case 'discovery':
+        return <NewSchemesPage language={language} />;
+      default:
+        return (
+          <ChatInterface 
+            profile={profile}
+            language={language}
+            messages={messages}
+            setMessages={setMessages}
+            isVoiceActive={false}
+            onToggleVoice={() => setIsVoiceOverlayOpen(true)}
+            onClearHistory={handleClearHistory}
+          />
+        );
+    }
+  };
+
   return (
     <div className="flex flex-col lg:flex-row h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
       <ProfileSidebar 
@@ -233,31 +266,7 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {currentView === 'profile' ? (
-          <ProfilePage profile={profile} setProfile={setProfile} language={language} />
-        ) : currentView === 'admin' ? (
-          profile.isAdmin ? <AdminPanel language={language} /> : <ChatInterface 
-            profile={profile}
-            language={language}
-            messages={messages}
-            setMessages={setMessages}
-            isVoiceActive={false}
-            onToggleVoice={() => setIsVoiceOverlayOpen(true)}
-            onClearHistory={handleClearHistory}
-          />
-        ) : currentView === 'discovery' ? (
-          <NewSchemesPage language={language} />
-        ) : (
-          <ChatInterface 
-            profile={profile}
-            language={language}
-            messages={messages}
-            setMessages={setMessages}
-            isVoiceActive={false}
-            onToggleVoice={() => setIsVoiceOverlayOpen(true)}
-            onClearHistory={handleClearHistory}
-          />
-        )}
+        {renderContent()}
 
         {showSetup && (
           <ProfileSetupModal 

@@ -91,9 +91,15 @@ const ProfileSidebar: React.FC<Props> = ({
         <div className="flex items-center gap-1">
           <button 
             onClick={toggleDark}
-            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500"
+            className={`p-2.5 rounded-xl transition-all border flex items-center gap-2 ${
+                isDark 
+                ? 'bg-slate-800 border-slate-700 text-yellow-400' 
+                : 'bg-orange-50 border-orange-100 text-orange-600'
+            }`}
+            title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
-            {isDark ? '☀️' : '🌙'}
+            {isDark ? <i className="fa-solid fa-sun"></i> : <i className="fa-solid fa-moon"></i>}
+            <span className="text-[10px] font-bold uppercase tracking-tighter">{isDark ? 'Light' : 'Dark'}</span>
           </button>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 lg:hidden">
             <i className="fa-solid fa-xmark text-slate-400"></i>

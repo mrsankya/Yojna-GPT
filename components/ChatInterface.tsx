@@ -150,7 +150,7 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
         'English': `Namaste! I am YojnaGPT, your personal assistant for government schemes. How can I help you today?`,
         'Hindi': `नमस्ते! मैं योजनाजीपीटी हूँ, सरकारी योजनाओं के लिए आपकी व्यक्तिगत सहायक। आज मैं आपकी क्या मदद कर सकती हूँ?`,
         'Marathi': `नमस्कार! मी योजनाजीपीटी आहे, सरकारी योजनांसाठी तुमची वैयक्तिक सहाय्यक. मी आज तुम्हाला कशी मदत करू शकते?`,
-        'Tamil': `வணக்கம்! நான் யோஜனாஜிபிடி, அரசு திட்டங்களுக்கான உங்கள் தனிப்பட்ட உதவியாளர். இன்று நான் உங்களுக்கு எப்படி உதவ முடியும்?`,
+        'Tamil': `வணக்கம்! நான் யோஜனாஜிபிடி, அரசு திட்டங்களுக்கான உங்கள் தனிப்பட்ட உதவியாளர். இன்று நான் உங்களுக்கு कैसे உதவ முடியும்?`,
         'Bengali': `নমস্কার! আমি যোজনাজিপিটি, সরকারি প্রকল্পের জন্য আপনার ব্যক্তিগত সহকারী। আজ আমি আপনাকে কীভাবে সাহায্য করতে পারি?`
       };
       const introText = intros[language] || intros['English'];
@@ -243,7 +243,7 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
   };
 
   const shareToWhatsApp = (title: string, uri: string) => {
-    const text = encodeURIComponent(`I found this useful Government Link on SmartGov Buddy: ${title}\nLink: ${uri}`);
+    const text = encodeURIComponent(`I found this useful tutorial for a Government Scheme on YojnaGPT:\n${title}\nLink: ${uri}`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
@@ -336,31 +336,40 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
               {m.groundingUrls && m.groundingUrls.length > 0 && (
                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Official Gov Sources:</p>
-                    <span className="text-[9px] font-black text-green-600 bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded border border-green-100 dark:border-green-800 flex items-center gap-1">
-                      <i className="fa-solid fa-circle-check"></i> VERIFIED
-                    </span>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Verified Resources & Tutorials:</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {m.groundingUrls.map((link, idx) => (
-                      <div key={idx} className="flex items-center gap-1 group">
-                        <a 
-                          href={link.uri} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-xs bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-3 py-1.5 rounded-l-full border border-orange-200 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-900/50 transition-colors inline-flex items-center gap-1 border-r-0 font-bold"
-                        >
-                          <i className="fa-solid fa-link text-[10px]"></i> {link.title.length > 25 ? link.title.substring(0, 22) + '...' : link.title}
-                        </a>
-                        <button 
-                          onClick={() => shareToWhatsApp(link.title, link.uri)}
-                          className="text-xs bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1.5 rounded-r-full border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors border-l-0"
-                          title="Share Link"
-                        >
-                          <i className="fa-brands fa-whatsapp"></i>
-                        </button>
-                      </div>
-                    ))}
+                    {m.groundingUrls.map((link, idx) => {
+                      const isYoutube = link.uri.includes('youtube.com') || link.uri.includes('youtu.be');
+                      return (
+                        <div key={idx} className="flex items-center gap-1 group">
+                          <a 
+                            href={link.uri} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className={`text-xs px-3 py-1.5 rounded-l-full border transition-all inline-flex items-center gap-1.5 border-r-0 font-bold ${
+                                isYoutube 
+                                ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100' 
+                                : 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800 hover:bg-orange-100'
+                            }`}
+                          >
+                            <i className={`fa-solid ${isYoutube ? 'fa-video' : 'fa-link'} text-[10px]`}></i> 
+                            {isYoutube ? 'Video Tutorial' : (link.title.length > 25 ? link.title.substring(0, 22) + '...' : link.title)}
+                          </a>
+                          <button 
+                            onClick={() => shareToWhatsApp(link.title, link.uri)}
+                            className={`text-xs px-3 py-1.5 rounded-r-full border transition-all border-l-0 ${
+                                isYoutube
+                                ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100'
+                                : 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800 hover:bg-green-100'
+                            }`}
+                            title="Share Link"
+                          >
+                            <i className="fa-brands fa-whatsapp"></i>
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -377,7 +386,7 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
               <span className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"></span>
               <span className="w-2 h-2 bg-orange-400 rounded-full animate-bounce delay-100"></span>
               <span className="w-2 h-2 bg-orange-400 rounded-full animate-bounce delay-200"></span>
-              <span className="ml-2 text-xs font-medium text-slate-400 animate-pulse">Scanning gov.in records...</span>
+              <span className="ml-2 text-xs font-medium text-slate-400 animate-pulse">Scanning records & finding tutorials...</span>
             </div>
           </div>
         )}

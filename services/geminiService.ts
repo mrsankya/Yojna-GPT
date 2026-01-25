@@ -26,7 +26,7 @@ export async function getSchemeResponse(
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     const profileContext = `User Profile Context: ${JSON.stringify(profile)}`;
     const locationContext = userLocation ? `User Lat/Lng: ${userLocation.lat}, ${userLocation.lng}` : '';
-    const identityEnforcement = `CRITICAL: The current user is named ${profile.fullName}. ALWAYS address them by this name.`;
+    const identityEnforcement = `The current user is named ${profile.fullName}.`;
     
     const contents = [
       ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'model', parts: [{ text: h.content }] })),
@@ -37,7 +37,7 @@ export async function getSchemeResponse(
       model: 'gemini-3-flash-preview',
       contents: contents as any,
       config: {
-        systemInstruction: `${SYSTEM_PROMPT}\n\n${profileContext}\n${locationContext}\n${identityEnforcement}\n\nREPLY IN ${language}. Be extremely thorough. For any scheme mentioned, you MUST explicitly list: 1. Benefits 2. Detailed Eligibility 3. Documents Checklist.`,
+        systemInstruction: `${SYSTEM_PROMPT}\n\n${profileContext}\n${locationContext}\n${identityEnforcement}\n\nREPLY IN ${language}. If the user just says "Hi" or "Hello", greet them back warmly and ask how to help. ONLY recommend or list schemes if the user asks for suggestions, asks "what am I eligible for?", or mentions a topic like education/farming.`,
         tools: [{ googleSearch: {} }],
       },
     });
@@ -46,9 +46,15 @@ export async function getSchemeResponse(
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     
     const urls = groundingChunks?.map((chunk: any) => ({
-      title: chunk.web?.title || 'Official Gov Portal',
+      title: chunk.web?.title || 'Resource Link',
       uri: chunk.web?.uri || '#'
-    })).filter((u: any) => u.uri !== '#' && (u.uri.includes('.gov.in') || u.uri.includes('.nic.in') || u.uri.includes('.in')));
+    })).filter((u: any) => {
+        if (u.uri === '#') return false;
+        const uri = u.uri.toLowerCase();
+        const isGov = uri.includes('.gov.in') || uri.includes('.nic.in') || uri.includes('.in');
+        const isYoutube = uri.includes('youtube.com') || uri.includes('youtu.be');
+        return isGov || isYoutube;
+    });
 
     return { text, urls, isLimited: false };
   } catch (error) {

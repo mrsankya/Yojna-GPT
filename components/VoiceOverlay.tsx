@@ -50,12 +50,19 @@ async function decodeAudioData(
 
 const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemInstruction, onAddMessage }) => {
   const [status, setStatus] = useState<'Connecting...' | 'Listening...' | 'Speaking...' | 'Error'>('Connecting...');
+  const [isMuted, setIsMuted] = useState(false);
   
   const currentInputTranscription = useRef('');
   const currentOutputTranscription = useRef('');
   const sessionRef = useRef<any>(null);
   const connectionInProgress = useRef(false);
   const isMounted = useRef(true);
+  const isMutedRef = useRef(false);
+
+  // Sync ref with state for the audio processor closure
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -97,6 +104,9 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
               const scriptProcessor = inputAudioContext.createScriptProcessor(4096, 1, 1);
               
               scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
+                // Skip sending audio if muted
+                if (isMutedRef.current) return;
+
                 const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
                 const l = inputData.length;
                 const int16 = new Int16Array(l);
@@ -182,8 +192,6 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
             speechConfig: {
               voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
             },
-            // Removed strict prompt for "INTRODUCE YOURSELF" to prevent immediate double responses.
-            // Model will react to the connection naturally or after silence.
             systemInstruction: `${systemInstruction}. CRITICAL: YOUR NAME IS YojnaGPT. YOU ARE A VOICE ASSISTANT. SPEAK NATIVELY IN ${language}. BE THOROUGH BUT BRIEF. ALWAYS GIVE BENEFITS AND DOCUMENTS FOR SCHEMES.`,
           },
         });
@@ -209,6 +217,10 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
     };
   }, [language]);
 
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center text-white p-6">
       <div className="absolute top-10 right-10 flex flex-col items-end gap-2">
@@ -227,11 +239,13 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
       </div>
 
       <div className="relative">
-        <div className={`absolute inset-0 rounded-full bg-orange-500 opacity-20 animate-ping duration-1000 ${status === 'Listening...' ? 'block' : 'hidden'}`}></div>
+        <div className={`absolute inset-0 rounded-full bg-orange-500 opacity-20 animate-ping duration-1000 ${status === 'Listening...' && !isMuted ? 'block' : 'hidden'}`}></div>
         
-        <div className={`w-32 h-32 rounded-full flex items-center justify-center border-4 ${status === 'Error' ? 'border-red-500' : 'border-orange-500'} relative bg-slate-800 transition-transform ${status === 'Speaking...' ? 'scale-110 shadow-[0_0_30px_rgba(249,115,22,0.5)]' : ''}`}>
+        <div className={`w-32 h-32 rounded-full flex items-center justify-center border-4 ${status === 'Error' ? 'border-red-500' : isMuted ? 'border-slate-600' : 'border-orange-500'} relative bg-slate-800 transition-transform ${status === 'Speaking...' ? 'scale-110 shadow-[0_0_30px_rgba(249,115,22,0.5)]' : ''}`}>
            {status === 'Error' ? (
              <span className="text-4xl">❌</span>
+           ) : isMuted ? (
+             <i className="fa-solid fa-microphone-slash text-4xl text-slate-500"></i>
            ) : (
              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -241,17 +255,30 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
       </div>
 
       <h3 className="mt-12 text-2xl font-bold tracking-tight">
-        {status}
+        {isMuted ? 'Microphone Muted' : status}
       </h3>
       
       <p className="mt-2 text-slate-400 text-center max-w-sm h-16 px-4">
-        {status === 'Listening...' ? `Ask me about government schemes in ${language}!` : 
+        {isMuted ? 'Background noise won\'t interrupt the AI while muted.' :
+         status === 'Listening...' ? `Ask me about government schemes in ${language}!` : 
          status === 'Speaking...' ? 'YojnaGPT is responding...' : 
          status === 'Error' ? 'Network connection lost. Please check your internet and microphone permissions.' : 
          'Connecting to YojnaGPT...'}
       </p>
 
-      <div className="mt-12 flex flex-col gap-4 items-center">
+      <div className="mt-12 flex flex-col sm:flex-row gap-4 items-center">
+        <button
+          onClick={toggleMute}
+          className={`flex items-center gap-3 px-8 py-3 rounded-full font-bold transition-all border ${
+            isMuted 
+            ? 'bg-red-600 border-red-500 text-white shadow-lg' 
+            : 'bg-white/10 border-white/20 text-slate-300 hover:bg-white/20'
+          }`}
+        >
+          <i className={`fa-solid ${isMuted ? 'fa-microphone-slash' : 'fa-microphone'}`}></i>
+          {isMuted ? 'Unmute Mic' : 'Mute Mic'}
+        </button>
+
         <button
           onClick={onClose}
           className="px-10 py-3 bg-white/10 hover:bg-white/20 rounded-full font-semibold border border-white/20 transition-all text-sm"
@@ -259,6 +286,13 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
           Exit Assistant
         </button>
       </div>
+      
+      {isMuted && (
+        <div className="mt-8 px-4 py-2 bg-orange-600/20 border border-orange-500/50 rounded-xl text-[10px] font-bold text-orange-400 uppercase tracking-widest flex items-center gap-2">
+          <i className="fa-solid fa-circle-info"></i>
+          Tip: Mute while the AI is talking to prevent it from being interrupted.
+        </div>
+      )}
     </div>
   );
 };

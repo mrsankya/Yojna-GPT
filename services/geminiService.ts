@@ -9,6 +9,7 @@ export async function getSchemeResponse(
   history: { role: 'user' | 'assistant', content: string }[],
   profile: UserProfile,
   language: string,
+  isWizardMode: boolean = false,
   userLocation?: { lat: number, lng: number }
 ) {
   const isOffline = !navigator.onLine;
@@ -18,6 +19,7 @@ export async function getSchemeResponse(
     return { 
       text: localResult, 
       urls: [],
+      suggestions: [],
       isLimited: true
     };
   }
@@ -28,6 +30,16 @@ export async function getSchemeResponse(
     const locationContext = userLocation ? `User Lat/Lng: ${userLocation.lat}, ${userLocation.lng}` : '';
     const identityEnforcement = `The current user is named ${profile.fullName}.`;
     
+    // Define Wizard Logic
+    const wizardInstruction = isWizardMode 
+      ? `\n\nCRITICAL: ELIGIBILITY WIZARD MODE IS ACTIVE. 
+         1. Do NOT provide a list of schemes immediately.
+         2. Instead, look at the User Profile Context and identify missing or vague information (e.g., specific occupation detail, exact annual income, or specific category).
+         3. Ask EXACTLY ONE short question to the user to gather a specific detail needed for eligibility.
+         4. After the user answers 3-4 questions, or if you have enough data, provide the final tailored recommendations.
+         5. Keep the conversation flow natural like a helpful officer.`
+      : "";
+
     const contents = [
       ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'model', parts: [{ text: h.content }] })),
       { role: 'user', parts: [{ text: message }] }
@@ -37,12 +49,23 @@ export async function getSchemeResponse(
       model: 'gemini-3-flash-preview',
       contents: contents as any,
       config: {
-        systemInstruction: `${SYSTEM_PROMPT}\n\n${profileContext}\n${locationContext}\n${identityEnforcement}\n\nREPLY IN ${language}. If the user just says "Hi" or "Hello", greet them back warmly and ask how to help. ONLY recommend or list schemes if the user asks for suggestions, asks "what am I eligible for?", or mentions a topic like education/farming.`,
+        systemInstruction: `${SYSTEM_PROMPT}\n\n${profileContext}\n${locationContext}\n${identityEnforcement}\n${wizardInstruction}\n\nREPLY IN ${language}. If the user just says "Hi" or "Hello", greet them back warmly and ask how to help. ONLY recommend or list schemes if the user asks for suggestions, asks "what am I eligible for?", or mentions a topic like education/farming.`,
         tools: [{ googleSearch: {} }],
       },
     });
 
-    const text = response.text || "I'm sorry, I couldn't process that.";
+    const rawText = response.text || "I'm sorry, I couldn't process that.";
+    
+    // Extract Suggestions
+    const suggestionMatch = rawText.match(/\[SUGGESTIONS: (.*?)\]/i);
+    let suggestions: string[] = [];
+    let text = rawText;
+    
+    if (suggestionMatch) {
+      suggestions = suggestionMatch[1].split(',').map(s => s.trim()).filter(s => s.length > 0);
+      text = rawText.replace(/\[SUGGESTIONS: .*?\]/i, '').trim();
+    }
+
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     
     const urls = groundingChunks?.map((chunk: any) => ({
@@ -56,13 +79,14 @@ export async function getSchemeResponse(
         return isGov || isYoutube;
     });
 
-    return { text, urls, isLimited: false };
+    return { text, urls, suggestions, isLimited: false };
   } catch (error) {
     console.error("Gemini Error:", error);
     const localResult = searchLocalSchemes(message, language);
     return { 
       text: localResult, 
       urls: [],
+      suggestions: [],
       isLimited: true 
     };
   }

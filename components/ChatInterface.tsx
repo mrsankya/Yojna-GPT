@@ -54,6 +54,7 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
   const [dismissedInfo, setDismissedInfo] = useState(false);
   const [isAutoSpeakEnabled, setIsAutoSpeakEnabled] = useState(false);
   const [isBotSpeaking, setIsBotSpeaking] = useState(false);
+  const [isWizardMode, setIsWizardMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Audio Context Ref for playback
@@ -151,7 +152,7 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
         'Hindi': `नमस्ते! मैं योजनाजीपीटी हूँ, सरकारी योजनाओं के लिए आपकी व्यक्तिगत सहायक। आज मैं आपकी क्या मदद कर सकती हूँ?`,
         'Marathi': `नमस्कार! मी योजनाजीपीटी आहे, सरकारी योजनांसाठी तुमची वैयक्तिक सहाय्यक. मी आज तुम्हाला कशी मदत करू शकते?`,
         'Tamil': `வணக்கம்! நான் யோஜனாஜிபிடி, அரசு திட்டங்களுக்கான உங்கள் தனிப்பட்ட உதவியாளர். இன்று நான் உங்களுக்கு कैसे உதவ முடியும்?`,
-        'Bengali': `নমস্কার! আমি যোজনাজিপিটি, সরকারি প্রকল্পের জন্য আপনার ব্যক্তিগত সহকারী। আজ আমি আপনাকে কীভাবে সাহায্য করতে পারি?`
+        'Bengali': `নমস্কার! আমি যোজনাजিপিটি, सरकारी প্রকল্পের জন্য আপনার ব্যক্তিগত সহকারী। আজ আমি আপনাকে কীভাবে সাহায্য করতে পারি?`
       };
       const introText = intros[language] || intros['English'];
       speakMessage(introText);
@@ -194,26 +195,27 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
     }
   };
 
-  const handleSend = async (e?: React.FormEvent) => {
+  const handleSend = async (customInput?: string, e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim() || isLoading) return;
+    const finalInput = customInput || input;
+    if (!finalInput.trim() || isLoading) return;
 
     stopSpeaking();
 
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: input,
+      content: finalInput,
       timestamp: Date.now()
     };
 
     setMessages(prev => [...prev, userMsg]);
-    setInput('');
+    if (!customInput) setInput('');
     setIsLoading(true);
 
     try {
-      const history = messages.slice(-6).map(m => ({ role: m.role, content: m.content }));
-      const response = await getSchemeResponse(input, history, profile, language);
+      const history = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
+      const response = await getSchemeResponse(finalInput, history, profile, language, isWizardMode);
       
       if (response.isLimited) {
         setHasApiError(true);
@@ -226,7 +228,8 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
         role: 'assistant',
         content: response.text,
         timestamp: Date.now(),
-        groundingUrls: response.urls
+        groundingUrls: response.urls,
+        suggestions: response.suggestions
       };
       setMessages(prev => [...prev, assistantMsg]);
     } catch (err: any) {
@@ -251,19 +254,45 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-900 h-full relative">
-      {/* Informational Header with Toggle */}
-      <div className="absolute top-0 inset-x-0 h-14 border-b dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md z-20 flex items-center justify-between px-4 lg:px-8">
-        <div className="flex items-center gap-2">
-          <div className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{isOnline ? 'System Online' : 'Offline Mode'}</span>
+      {/* Informational Header with Toggles */}
+      <div className="absolute top-0 inset-x-0 h-16 border-b dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl z-20 flex items-center justify-between px-4 lg:px-8">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden sm:inline">{isOnline ? 'System Online' : 'Offline Mode'}</span>
+          </div>
+
+          {/* Wizard Mode Toggle */}
+          <button 
+            onClick={() => {
+                const nextWizardMode = !isWizardMode;
+                setIsWizardMode(nextWizardMode);
+                if (nextWizardMode) {
+                    // Fixed: Replaced undefined addMessage with setMessages to correctly push the assistant message
+                    const wizardMsg: Message = {
+                      id: 'wizard-' + Date.now(),
+                      role: 'assistant',
+                      content: "Eligibility Wizard Activated! I will now ask you questions one by one to find the best schemes for you. What is your primary need today? (e.g., Farming, Education, Business)",
+                      timestamp: Date.now()
+                    };
+                    setMessages(prev => [...prev, wizardMsg]);
+                }
+            }}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${
+              isWizardMode 
+                ? 'bg-purple-600 text-white border-purple-500 shadow-md scale-105' 
+                : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+            }`}
+            title={isWizardMode ? "Disable Wizard Mode" : "Enable Step-by-Step Wizard"}
+          >
+            <i className={`fa-solid ${isWizardMode ? 'fa-wand-magic-sparkles' : 'fa-list-check'} text-xs`}></i>
+            <span className="text-[10px] font-bold uppercase tracking-tighter">
+              {isWizardMode ? 'Wizard ON' : 'Step-by-Step'}
+            </span>
+          </button>
         </div>
         
         <div className="flex items-center gap-2 md:gap-3">
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-full">
-            <i className="fa-solid fa-shield-check text-green-600 text-[10px]"></i>
-            <span className="text-[9px] font-bold text-green-700 dark:text-green-400 uppercase tracking-tighter">Domain Verified</span>
-          </div>
-          
           <button 
             onClick={toggleAutoSpeak}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${
@@ -286,7 +315,7 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
             </span>
           </button>
 
-          {messages.length > 0 && onClearHistory && (
+          {messages.length > 1 && onClearHistory && (
             <button 
               onClick={onClearHistory}
               className="p-1.5 md:px-3 md:py-1.5 text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1.5"
@@ -300,7 +329,7 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
       </div>
 
       {isLimited && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="bg-orange-600/90 backdrop-blur-md text-white text-[10px] md:text-xs font-bold py-2 px-4 rounded-full shadow-lg border border-orange-400 flex items-center gap-3 whitespace-nowrap">
             <span className="flex h-2 w-2 rounded-full bg-orange-200 animate-pulse"></span>
             issue with server you can ask me only yojna (schemes)
@@ -314,9 +343,18 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
         </div>
       )}
       
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6 pt-20">
-        {messages.map((m) => (
-          <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+      {isWizardMode && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="bg-purple-600/90 backdrop-blur-md text-white text-[9px] font-bold py-1.5 px-3 rounded-full shadow-lg border border-purple-400 flex items-center gap-2">
+                <i className="fa-solid fa-wand-magic-sparkles animate-pulse"></i>
+                WIZARD ACTIVE: ANSWERING QUESTIONS ONE BY ONE
+            </div>
+        </div>
+      )}
+      
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6 pt-24 pb-8">
+        {messages.map((m, mIdx) => (
+          <div key={m.id} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
             <div className={`max-w-[85%] lg:max-w-[70%] rounded-2xl p-4 shadow-sm relative ${
               m.role === 'user' 
                 ? 'bg-orange-600 text-white rounded-tr-none' 
@@ -378,6 +416,22 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
                 {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
+
+            {/* Suggestion Chips - Only show for assistant messages and if they exist */}
+            {m.role === 'assistant' && m.suggestions && m.suggestions.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-2 duration-500">
+                {m.suggestions.map((suggestion, sIdx) => (
+                  <button
+                    key={sIdx}
+                    onClick={() => handleSend(suggestion)}
+                    className="text-[11px] font-bold px-4 py-2 bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800 rounded-full shadow-sm hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-400 transition-all flex items-center gap-2 group"
+                  >
+                    <i className="fa-solid fa-arrow-right text-[8px] opacity-40 group-hover:translate-x-0.5 transition-transform"></i>
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ))}
         {isLoading && (
@@ -393,7 +447,7 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
       </div>
 
       <div className="p-4 bg-white dark:bg-slate-800 border-t dark:border-slate-700">
-        <form onSubmit={handleSend} className="max-w-4xl mx-auto flex items-center gap-2 lg:gap-4">
+        <form onSubmit={(e) => handleSend(undefined, e)} className="max-w-4xl mx-auto flex items-center gap-2 lg:gap-4">
           <button
             type="button"
             onClick={onToggleVoice}
@@ -415,8 +469,8 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={t('chat_placeholder', language)}
-              className="w-full p-3 pr-12 rounded-xl border bg-white text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all shadow-inner"
+              placeholder={isWizardMode ? "Answer the bot's question..." : t('chat_placeholder', language)}
+              className={`w-full p-3 pr-12 rounded-xl border bg-white text-slate-900 dark:text-white focus:ring-2 outline-none transition-all shadow-inner ${isWizardMode ? 'focus:ring-purple-500 border-purple-200 dark:border-purple-800' : 'focus:ring-orange-500 dark:border-slate-600 dark:bg-slate-900'}`}
             />
             <button
               type="button"
@@ -437,7 +491,7 @@ const ChatInterface: React.FC<Props> = ({ profile, language, messages, setMessag
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="bg-orange-600 hover:bg-orange-700 text-white p-3 rounded-xl disabled:opacity-50 transition-all shadow-lg shadow-orange-200 dark:shadow-none shrink-0"
+            className={`p-3 rounded-xl disabled:opacity-50 transition-all shadow-lg shrink-0 text-white ${isWizardMode ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-200' : 'bg-orange-600 hover:bg-orange-700 shadow-orange-200 dark:shadow-none'}`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />

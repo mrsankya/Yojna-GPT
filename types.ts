@@ -55,6 +55,7 @@ export interface Message {
   timestamp: number;
   isVoice?: boolean;
   groundingUrls?: { title: string; uri: string }[];
+  suggestions?: string[];
 }
 
 export enum AppLanguage {

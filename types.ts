@@ -9,6 +9,17 @@ export interface FamilyMember {
   disability: boolean;
 }
 
+export interface StoredDocument {
+  id: string;
+  name: string;
+  type: string;
+  uploadDate: number;
+  expiryDate?: string;
+  status: 'valid' | 'expired' | 'pending' | 'unverified';
+  fileData: string; // Base64
+  mimeType: string;
+}
+
 export interface UserProfile {
   age?: number;
   gender?: 'Male' | 'Female' | 'Other';
@@ -28,6 +39,7 @@ export interface UserProfile {
   familyMembers?: FamilyMember[];
   citizenPoints?: number;
   isAdmin?: boolean;
+  documents?: StoredDocument[];
 }
 
 export interface Scheme {
@@ -72,4 +84,4 @@ export enum AppLanguage {
   ENGLISH = 'English'
 }
 
-export type AppView = 'chat' | 'profile' | 'admin' | 'discovery';
+export type AppView = 'chat' | 'profile' | 'admin' | 'discovery' | 'vault';

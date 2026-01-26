@@ -9,6 +9,7 @@ import AdminPanel from './components/AdminPanel';
 import NewSchemesPage from './components/NewSchemesPage';
 import AuthPage from './components/AuthPage';
 import ProfileSetupModal from './components/ProfileSetupModal';
+import DocumentVault from './components/DocumentVault';
 import { UserProfile, AppLanguage, AppView, Message } from './types';
 import { SYSTEM_PROMPT, t } from './constants';
 
@@ -29,7 +30,8 @@ const App: React.FC = () => {
     income: '1-3 Lakhs',
     occupation: 'Citizen',
     citizenPoints: 1450,
-    isAdmin: false
+    isAdmin: false,
+    documents: []
   });
   
   const [language, setLanguage] = useState<string>(AppLanguage.ENGLISH);
@@ -45,7 +47,12 @@ const App: React.FC = () => {
     const savedUser = localStorage.getItem('yojnagpt_active_user');
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
-      setProfile(parsedUser);
+      
+      // Load user-specific profile data if it exists
+      const userSpecificData = localStorage.getItem(`yojnagpt_user_data_${parsedUser.fullName}`);
+      const finalProfile = userSpecificData ? JSON.parse(userSpecificData) : parsedUser;
+      
+      setProfile(finalProfile);
       setIsAuthenticated(true);
       
       const savedHistory = localStorage.getItem(`yojnagpt_history_${parsedUser.fullName}`);
@@ -54,7 +61,7 @@ const App: React.FC = () => {
       }
 
       const setupDismissed = localStorage.getItem(`yojnagpt_setup_dismissed_${parsedUser.fullName}`);
-      if (!setupDismissed && parsedUser.fullName && (!parsedUser.age || parsedUser.age === 28)) {
+      if (!setupDismissed && parsedUser.fullName && (!finalProfile.age || finalProfile.age === 28)) {
         setShowSetup(true);
       }
     }
@@ -63,14 +70,22 @@ const App: React.FC = () => {
     if (savedTheme === 'dark') setIsDark(true);
   }, []);
 
-  // 2. Persistent Save: Sync messages to local storage
+  // 2. Persistent Save: Sync profile state to user-specific local storage
+  useEffect(() => {
+    if (isAuthenticated && profile.fullName) {
+      localStorage.setItem('yojnagpt_active_user', JSON.stringify(profile));
+      localStorage.setItem(`yojnagpt_user_data_${profile.fullName}`, JSON.stringify(profile));
+    }
+  }, [profile, isAuthenticated]);
+
+  // 3. Persistent Save: Sync messages to local storage
   useEffect(() => {
     if (isAuthenticated && profile.fullName && messages.length > 0) {
       localStorage.setItem(`yojnagpt_history_${profile.fullName}`, JSON.stringify(messages));
     }
   }, [messages, isAuthenticated, profile.fullName]);
 
-  // 3. Welcome Message logic
+  // 4. Welcome Message logic
   useEffect(() => {
     if (isAuthenticated && messages.length === 0) {
       setMessages([{
@@ -82,7 +97,7 @@ const App: React.FC = () => {
     }
   }, [language, isAuthenticated, messages.length]);
 
-  // 4. Dark Mode Handler
+  // 5. Dark Mode Handler
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
@@ -106,25 +121,28 @@ const App: React.FC = () => {
 
   const handleClearHistory = () => {
     if (window.confirm("Are you sure you want to clear your chat history? This cannot be undone.")) {
-      // Step 1: Immediately clear localStorage to prevent race condition with effect
       if (profile.fullName) {
         localStorage.removeItem(`yojnagpt_history_${profile.fullName}`);
       }
-      // Step 2: Update state, which triggers a re-render and re-adds welcome message via effect
       setMessages([]);
     }
   };
 
   const handleLogin = (data: any) => {
+    // Check if this specific user has saved profile data
+    const existingUserData = localStorage.getItem(`yojnagpt_user_data_${data.fullName}`);
+    const baseProfile = existingUserData ? JSON.parse(existingUserData) : profile;
+
     const updatedProfile = { 
-      ...profile, 
+      ...baseProfile, 
       ...data,
-      citizenPoints: data.isDemo ? 5000 : (data.citizenPoints || 1450)
+      citizenPoints: data.isDemo ? 5000 : (existingUserData ? baseProfile.citizenPoints : (data.citizenPoints || 1450))
     };
     
     setProfile(updatedProfile);
     setIsAuthenticated(true);
     localStorage.setItem('yojnagpt_active_user', JSON.stringify(updatedProfile));
+    localStorage.setItem(`yojnagpt_user_data_${updatedProfile.fullName}`, JSON.stringify(updatedProfile));
     
     const savedHistory = localStorage.getItem(`yojnagpt_history_${updatedProfile.fullName}`);
     if (savedHistory) {
@@ -134,13 +152,15 @@ const App: React.FC = () => {
     }
 
     const setupDismissed = localStorage.getItem(`yojnagpt_setup_dismissed_${updatedProfile.fullName}`);
-    setShowSetup(!setupDismissed);
+    // Only show setup if there is no specific data and it hasn't been dismissed
+    setShowSetup(!setupDismissed && !existingUserData);
   };
 
   const handleSaveSetup = (updatedProfile: UserProfile) => {
     setProfile(updatedProfile);
     setShowSetup(false);
     localStorage.setItem('yojnagpt_active_user', JSON.stringify(updatedProfile));
+    localStorage.setItem(`yojnagpt_user_data_${updatedProfile.fullName}`, JSON.stringify(updatedProfile));
     localStorage.setItem(`yojnagpt_setup_dismissed_${updatedProfile.fullName}`, 'true');
     addMessage(`Profile updated successfully! I am now ready to provide personalized recommendations for ${updatedProfile.occupation} in ${updatedProfile.location}.`, 'assistant');
   };
@@ -158,13 +178,21 @@ const App: React.FC = () => {
     setMessages([]);
     setCurrentView('chat');
     setShowSetup(false);
-    setProfile(prev => ({ 
-      ...prev, 
-      fullName: '', 
-      isAdmin: false, 
-      isDemo: false,
-      occupation: 'Citizen'
-    }));
+    setProfile({
+      category: 'General',
+      disability: false,
+      fullName: '',
+      location: 'Lucknow, Uttar Pradesh',
+      email: '',
+      phoneNumber: '',
+      state: 'Uttar Pradesh',
+      age: 28,
+      income: '1-3 Lakhs',
+      occupation: 'Citizen',
+      citizenPoints: 1450,
+      isAdmin: false,
+      documents: []
+    });
   };
 
   const getTier = (points: number) => {
@@ -178,7 +206,6 @@ const App: React.FC = () => {
     return <AuthPage onLogin={handleLogin} />;
   }
 
-  // Unified Rendering Logic
   const renderContent = () => {
     switch (currentView) {
       case 'profile':
@@ -195,6 +222,8 @@ const App: React.FC = () => {
         />;
       case 'discovery':
         return <NewSchemesPage language={language} />;
+      case 'vault':
+        return <DocumentVault profile={profile} setProfile={setProfile} language={language} />;
       default:
         return (
           <ChatInterface 

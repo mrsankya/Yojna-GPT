@@ -4,6 +4,52 @@ import { SYSTEM_PROMPT } from "../constants";
 import { UserProfile, ComparisonData, Scheme } from "../types";
 import { searchLocalSchemes, getLocalLatestSchemes } from "./localSearchService";
 
+export async function verifyDocument(base64Data: string, mimeType: string) {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  const today = new Date().toISOString().split('T')[0];
+
+  const documentPart = {
+    inlineData: {
+      data: base64Data,
+      mimeType: mimeType,
+    },
+  };
+
+  const prompt = `Analyze this Indian government document (Image or PDF). 
+  1. Identify the Document Type (e.g., Aadhaar, PAN, Ration Card, Income Certificate, Caste Certificate).
+  2. Extract the Holder Name.
+  3. Extract the Expiry Date (if any specifically mentioned on the document).
+  4. Compare with today's date: ${today}.
+  5. State if it is currently "valid" or "expired".
+  6. Briefly explain your reasoning in the "reason" field.
+  Return the result in JSON format.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: [{ parts: [documentPart, { text: prompt }] }],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            docType: { type: Type.STRING },
+            holderName: { type: Type.STRING },
+            expiryDate: { type: Type.STRING, description: 'Format YYYY-MM-DD' },
+            status: { type: Type.STRING, enum: ['valid', 'expired', 'unknown'] },
+            reason: { type: Type.STRING }
+          }
+        } as any
+      }
+    });
+
+    return JSON.parse(response.text);
+  } catch (error) {
+    console.error("Verification Error:", error);
+    return null;
+  }
+}
+
 export async function getSchemeResponse(
   message: string, 
   history: { role: 'user' | 'assistant', content: string }[],

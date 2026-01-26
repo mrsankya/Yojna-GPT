@@ -167,6 +167,7 @@ const ProfileSidebar: React.FC<Props> = ({
         <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Main Menu</h3>
         <NavButton view="chat" icon="💬" label={t('nav_chat', language)} />
         <NavButton view="discovery" icon="✨" label={t('nav_discovery', language)} badge="NEW" />
+        <NavButton view="vault" icon="🛡️" label="My Documents" />
         <NavButton view="profile" icon="👤" label={t('nav_profile', language)} />
         {profile.isAdmin && <NavButton view="admin" icon="🛡️" label={t('nav_admin', language)} />}
       </nav>

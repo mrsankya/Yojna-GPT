@@ -90,8 +90,15 @@ const VoiceOverlay: React.FC<Props> = ({ onClose, language, setLanguage, systemI
         // Start Live Session
         micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         
-        // Ensure we use a fresh instance to avoid socket reuse errors
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+        // Fetch API key at runtime from server
+        const configRes = await fetch('/.netlify/functions/get-voice-config');
+        const configData = await configRes.json();
+        if (!configData.key) {
+          if (isMounted.current) setStatus('Error');
+          connectionInProgress.current = false;
+          return;
+        }
+        const ai = new GoogleGenAI({ apiKey: configData.key });
         
         const sessionPromise = ai.live.connect({
           model: 'gemini-2.5-flash-native-audio-preview-12-2025',

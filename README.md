@@ -1,5 +1,5 @@
 <div align="center">
-  <img width="1200" height="400" alt="YojnaGPT Banner" src="https://github.com/<your-username>/<your-repo>/blob/main/Copilot_20260623_230023.png?raw=true" />
+  <img width="1200" height="400" alt="YojnaGPT Banner" src="https://github.com/mrsankya/Yojna-GPT/blob/main/Copilot_20260623_230023.png?raw=true" />
 </div>
 
 # 🚀 YojnaGPT – AI Innovation Hub

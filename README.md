@@ -1,20 +1,35 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+  <img width="1200" height="400" alt="YojnaGPT Banner" src="https://github.com/<your-username>/<your-repo>/blob/main/Copilot_20260623_230023.png?raw=true" />
 </div>
 
-# Run and deploy your AI Studio app
+# 🚀 YojnaGPT – AI Innovation Hub
 
-This contains everything you need to run your app locally.
+[![Node.js](https://img.shields.io/badge/Node.js-20+-green?logo=node.js)](https://nodejs.org)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/status-active-success.svg)]()
 
-View your app in AI Studio: https://ai.studio/apps/drive/1k9VKCqTQMWP07IL9oZPCsYO7iIkc2ieA
+**Created by Sanket | B.Tech CSE, GH Raisoni College**
 
-## Run Locally
+This repository contains everything you need to **run YojnaGPT locally** and deploy it to production.
 
-**Prerequisites:**  Node.js
+---
 
+## 📦 Features
+- ⚡ Fast local development with Node.js
+- 🔑 Secure API key management via `.env.local`
+- 🧠 Powered by Gemini AI
+- 🌐 Ready for deployment on modern platforms
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+---
+
+## 🛠️ Prerequisites
+- [Node.js](https://nodejs.org) v20+
+- Gemini API Key (from [Google AI Studio](https://ai.google.dev))
+
+---
+
+## ▶️ Run Locally
+
+1. **Install dependencies**
+   ```bash
+   npm install
